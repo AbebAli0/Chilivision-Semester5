@@ -1,0 +1,73 @@
+{
+  "metadata": {
+    "description": "Basis pengetahuan gejala, penyebab, dan penanganan penyakit daun cabai dari 5 jurnal terverifikasi untuk Smart Chatbot ChiliVision (Website & Telegram).",
+    "journals": [
+      "Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1",
+      "Sabila dkk. (2026), JINTEKS Vol. 8 No. 3",
+      "Hussein dkk. (2023), Egyptian Journal of Biological Pest Control 33:114",
+      "Gulo dkk. (2024), Jurnal Tumbuhan ASRITANI Vol. 1 No. 3",
+      "Hanif dkk. (2025), Prosiding Semnas PNL Vol. 8 No. 1"
+    ],
+    "optimal_environment": {
+      "temperature_c": "21-32°C",
+      "sunlight": "6-8 jam/hari",
+      "source": "Gulo dkk. (2024), Jurnal Tumbuhan ASRITANI Vol. 1 No. 3"
+    }
+  },
+  "diseases": [
+    {
+      "id": "bercak_bakteri",
+      "aliases": ["bacterial_spot", "bacterial spot", "bercak bakteri", "xanthomonas"],
+      "name": "Bercak Bakteri (Bacterial Spot)",
+      "source": "Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1; Hanif dkk. (2025), Prosiding Semnas PNL Vol. 8 No. 1",
+      "penyebab": "Infeksi bakteri Xanthomonas spp. yang menyerang jaringan daun cabai dan menyebar cepat pada kondisi lingkungan lembap serta melalui percikan air penyiraman atau hujan.",
+      "gejala": "Muncul lesi atau bercak nekrotik berwarna cokelat tua hingga kehitaman pada permukaan daun yang dikelilingi lingkaran/halo kuning.",
+      "penanganan": "Pangkas dan buang daun yang terinfeksi berat agar tidak menular, hindari penyiraman berlebih yang membasahi daun terus-menerus, jaga jarak tanam serta sirkulasi udara, pantau kelembapan via sensor DHT11, dan lakukan penyemprotan pestisida/bakterisida secara terukur melalui konfirmasi ChiliVision."
+    },
+    {
+      "id": "bercak_cercospora",
+      "aliases": ["cercospora", "cercospora leaf spot", "bercak cercospora", "mata kodok"],
+      "name": "Bercak Cercospora (Cercospora Leaf Spot)",
+      "source": "Sabila dkk. (2026), JINTEKS Vol. 8 No. 3; Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1",
+      "penyebab": "Infeksi cendawan/jamur Cercospora capsici yang berkembang cepat pada kelembapan tinggi dan merusak dinding sel epidermis daun.",
+      "gejala": "Muncul bintik-bintik melingkar kecil berwarna cokelat tua dengan bagian pusat berwarna putih keabu-abuan; jika meluas bercak menyatu, memicu nekrosis dan klorosis (daun menguning) hingga gugur prematur.",
+      "penanganan": "Lakukan sanitasi daun yang terinfeksi, atur jarak tanam dan drainase agar kelembapan tidak berlebih, gunakan benih sehat, serta semprot fungisida/biopestisida secara terukur sesuai konfirmasi pada sistem ChiliVision."
+    },
+    {
+      "id": "bercak_putih",
+      "aliases": ["white_spot", "white spot", "bercak putih", "embun tepung", "powdery mildew", "leveillula taurica"],
+      "name": "Bercak Putih / Embun Tepung (White Spot)",
+      "source": "Hussein dkk. (2023), Egyptian Journal of Biological Pest Control 33:114; Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1; Hanif dkk. (2025), Prosiding Semnas PNL Vol. 8 No. 1",
+      "penyebab": "Infeksi jamur embun tepung (Leveillula taurica) maupun patogen bercak putih atau faktor abiotik pada daun cabai, terutama saat kelembapan tinggi (>80%) dan suhu hangat.",
+      "gejala": "Muncul bercak atau lapisan koloni putih pucat menyerupai tepung pada permukaan/bagian bawah daun yang menghambat fotosintesis serta menurunkan ukuran dan jumlah buah.",
+      "penanganan": "Pangkas daun dengan bercak putih yang parah, jaga kebersihan lahan dan sirkulasi udara, pantau suhu/kelembapan melalui sensor DHT11, dan kendalikan menggunakan agens hayati (seperti Bacillus thuringiensis atau Pseudomonas fluorescens) atau fungisida secara terukur agar patogen tidak menjadi resisten."
+    },
+    {
+      "id": "virus_keriting",
+      "aliases": ["curl_virus", "curl virus", "leaf curl", "virus keriting", "begomovirus", "geminivirus"],
+      "name": "Virus Keriting (Curl Virus)",
+      "source": "Sabila dkk. (2026), JINTEKS Vol. 8 No. 3; Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1; Hanif dkk. (2025), Prosiding Semnas PNL Vol. 8 No. 1",
+      "penyebab": "Infeksi virus (Begomovirus / Geminivirus) yang ditularkan secara mekanis oleh vektor serangga hama pengisap seperti kutu kebul (Bemisia tabaci), aphis, tungau, atau thrips.",
+      "gejala": "Daun menggulung atau melengkung ke atas, berkerut, bertekstur kaku, mengalami malformasi dan pengecilan ukuran; sering disertai gejala menguning (klorosis) serta koloni kutu putih/jelaga hitam di balik daun.",
+      "penanganan": "Kendalikan serangga vektor (kutu kebul/aphis/thrips) dengan penyemprotan pestisida secara terukur melalui konfirmasi tombol/chatbot ChiliVision, isolasi atau cabut tanaman yang terinfeksi berat, dan bersihkan gulma inang di sekitar lahan."
+    },
+    {
+      "id": "defisiensi_nutrisi",
+      "aliases": ["nutrition_deficiency", "nutrition deficiency", "defisiensi nutrisi", "kurang nutrisi", "kekurangan unsur hara", "daun kuning"],
+      "name": "Defisiensi Nutrisi (Kekurangan Unsur Hara)",
+      "source": "Gulo dkk. (2024), Jurnal Tumbuhan ASRITANI Vol. 1 No. 3; Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1",
+      "penyebab": "Kekurangan unsur hara makro/mikro (Nitrogen, Fosfor, Kalium, Kalsium, Magnesium), kualitas atau drainase tanah yang buruk, serta pemupukan dan pengairan yang tidak tepat.",
+      "gejala": "Klorosis atau perubahan warna daun sistemik: kurang Nitrogen membuat daun hijau kekuningan pucat; kurang Fosfor membuat daun tua mengkilap kemerahan; kurang Kalium membuat daun tua mengkerut dengan bercak merah kecoklatan; kurang Kalsium membuat tepi daun muda menguning dan mati; kurang Magnesium menyebabkan klorofil gagal terbentuk dan daun mengering.",
+      "penanganan": "Berikan pemupukan berimbang (pupuk organik/kompos, NPK, dan pupuk mikro sesuai kebutuhan), gemburkan tanah dan perbaiki drainase, jaga penyiraman teratur serta suhu optimal (21-32°C). Tidak perlu menyemprotkan pestisida karena bukan serangan hama/patogen."
+    },
+    {
+      "id": "daun_sehat",
+      "aliases": ["healthy", "healthy leaf", "healthy leaves", "daun sehat", "sehat"],
+      "name": "Daun Sehat (Healthy)",
+      "source": "Sabila dkk. (2026), JINTEKS Vol. 8 No. 3; Fauzan dkk. (2026), JIEET Unesa Vol. 10 No. 1; Gulo dkk. (2024), Jurnal Tumbuhan ASRITANI Vol. 1 No. 3",
+      "penyebab": "Tanaman tumbuh pada kondisi lingkungan, nutrisi, dan pengairan yang seimbang tanpa infeksi patogen.",
+      "gejala": "Permukaan daun halus dan seragam, warna hijau segar merata, tidak ada bercak nekrotik atau klorosis, dan tepi daun tidak mengalami deformasi atau keriting.",
+      "penanganan": "Pertahankan penyiraman otomatis saat kelembapan tanah turun di bawah ambang batas (<30%), jaga pencahayaan matahari 6-8 jam/hari dan suhu optimal 21-32°C, serta lanjutkan pemupukan berkala tanpa perlu menyemprotkan pestisida."
+    }
+  ]
+}

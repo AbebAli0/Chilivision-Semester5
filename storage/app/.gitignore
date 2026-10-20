@@ -1,0 +1,5 @@
+*
+!private/
+!public/
+!chili_disease_knowledge.json
+!.gitignore

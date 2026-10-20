@@ -1,0 +1,54 @@
+# Laravel & Node
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/apache/
+/storage/certs/
+/storage/app/public/leaves/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+/vendor
+.env
+.env.*
+!.env.example
+!.env.cloud.example
+.phpunit.cache
+.phpunit.result.cache
+
+# Python & AI Training
+.venv/
+__pycache__/
+*.py[cod]
+dataset_raw/*
+dataset_split/*
+Datasetfix.zip
+Datasetfix_local/
+models/_backup_*/
+models/*.h5
+!models/cnn_5ch_7kelas_hard_negative.keras
+!models/yolov8n_chili.pt
+reports/*
+!reports/.gitkeep
+runs/
+*.log
+
+# ESP32 local secrets
+esp32/**/secrets.h
+
+# Local AI / IDE / presentation files (tetap ada di laptop, tidak perlu di-upload ke GitHub)
+.agents/
+.claude/
+.codex/
+.github/
+.mcp.json
+.vscode/
+AGENTS.md
+CLAUDE.md
+boost.json
+ChiliVision_Presentasi.pptx
+panduan_demo.txt
