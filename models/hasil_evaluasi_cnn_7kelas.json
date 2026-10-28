@@ -1,0 +1,25 @@
+{
+  "model": "Residual CNN 5-Channel dengan Segmentasi GrabCut Per Daun + Hard Negative (7 Kelas)",
+  "channels": [
+    "R_Seg",
+    "G_Seg",
+    "B_Seg",
+    "CLAHE_Gray",
+    "Canny_Edge"
+  ],
+  "image_size": 128,
+  "class_names": [
+    "bercak_bakteri",
+    "bercak_cercospora",
+    "bercak_putih",
+    "daun_sehat",
+    "defisiensi_nutrisi",
+    "virus_keriting",
+    "bukan_daun"
+  ],
+  "validation_accuracy": 0.9881188118811881,
+  "test_accuracy": 0.9692832764505119,
+  "test_macro_precision": 0.9524980483996878,
+  "test_macro_recall": 0.9613805313495716,
+  "test_macro_f1": 0.954800843673206
+}
