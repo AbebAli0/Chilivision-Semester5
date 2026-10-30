@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="16" y1="16" x2="240" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f3d24"/>
+      <stop offset="55%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#082213"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="40" y1="40" x2="216" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#22c55e" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="chiliGrad" x1="82" y1="74" x2="174" y2="196" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff5f56"/>
+      <stop offset="48%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="110" y1="46" x2="196" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="55%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <filter id="softShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#04130a" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded Smart-Agri Badge Background -->
+  <rect x="12" y="12" width="232" height="232" rx="54" fill="url(#bgGrad)" stroke="#22c55e" stroke-width="4" stroke-opacity="0.4"/>
+
+  <!-- Computer Vision AI Scanner Reticle Corners -->
+  <g stroke="#4ade80" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.82">
+    <path d="M48 76 V54 Q48 48 54 48 H76"/>
+    <path d="M180 48 H202 Q208 48 208 54 V76"/>
+    <path d="M48 180 V202 Q48 208 54 208 H76"/>
+    <path d="M180 208 H202 Q208 208 208 202 V180"/>
+  </g>
+
+  <!-- Vision Orbit Ring -->
+  <circle cx="128" cy="132" r="70" stroke="url(#ringGrad)" stroke-width="3.5" stroke-dasharray="10 8" opacity="0.7"/>
+  <circle cx="128" cy="132" r="54" stroke="#86efac" stroke-width="1.5" stroke-opacity="0.25"/>
+
+  <!-- IoT Sensor Nodes -->
+  <circle cx="128" cy="62" r="4.5" fill="#4ade80"/>
+  <circle cx="198" cy="132" r="4.5" fill="#4ade80"/>
+  <circle cx="58" cy="132" r="4.5" fill="#f87171"/>
+
+  <!-- Chili Leaf (Smart Crop Symbol) -->
+  <g filter="url(#softShadow)">
+    <path d="M126 78 C144 54, 184 56, 192 86 C182 112, 152 122, 128 106 Z" fill="url(#leafGrad)"/>
+    <path d="M130 92 Q158 84 182 84" stroke="#dcfce7" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/>
+  </g>
+
+  <!-- Chili Pepper Body -->
+  <g filter="url(#softShadow)">
+    <!-- Stem & Calyx -->
+    <path d="M114 54 C112 66, 118 76, 124 82" stroke="#4ade80" stroke-width="7" stroke-linecap="round"/>
+    <path d="M108 82 C116 74, 132 76, 138 86 C128 90, 116 90, 108 82 Z" fill="#22c55e"/>
+
+    <!-- Red Chili Curve -->
+    <path d="M108 84 C92 102, 86 138, 102 168 C116 194, 148 204, 174 190 C180 186, 178 178, 170 178 C148 180, 128 166, 124 142 C120 120, 128 100, 136 86 C128 80, 116 80, 108 84 Z" fill="url(#chiliGrad)"/>
+
+    <!-- Gloss Highlight -->
+    <path d="M106 102 C99 122, 101 146, 114 166" stroke="#fecaca" stroke-width="4" stroke-linecap="round" opacity="0.65"/>
+  </g>
+</svg>
