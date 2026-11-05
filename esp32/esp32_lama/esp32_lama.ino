@@ -279,3 +279,263 @@ void tampilLCD() {
       lcd.print("C");
     }
 
+    lcd.setCursor(0, 1);
+    lcd.print("Udara: ");
+
+    if (isnan(kelembapanUdara)) {
+      lcd.print("--");
+    } else {
+      lcd.print(kelembapanUdara, 1);
+      lcd.print("%");
+    }
+  }
+
+  tampilan = 1 - tampilan;
+}
+
+// ================= KONTROL RELAY =================
+unsigned long mulaiRelay1Ms = 0;
+unsigned long mulaiRelay2Ms = 0;
+
+void kirimHistoriManual(bool pestisida, unsigned long mulaiMs) {
+  int detik = (millis() - mulaiMs) / 1000UL;
+  if (detik < 1) detik = 1;
+  if (detik > 300) detik = 300;
+
+  String payload =
+    "{\"trigger_mode\":\"manual\","
+    "\"triggered_by\":\"esp32_serial\","
+    "\"duration_seconds\":" + String(detik) +
+    ",\"notes\":\"Penyemprotan manual Serial Monitor ESP32\"}";
+
+  kirimPost(
+    pestisida ? "/spray/pesticide/history" : "/spray/water/history",
+    payload
+  );
+}
+
+void kontrolRelay(char perintah) {
+  if (perintah == '1') {
+    statusRelay1 = !statusRelay1;
+    stopRelay1Ms = 0;
+    digitalWrite(RELAY1, statusRelay1 ? RELAY_ON : RELAY_OFF);
+
+    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
+    Serial.println(
+      statusRelay1
+        ? "Pompa Air (Relay 1) STATUS: ON | Manual Serial"
+        : "Pompa Air (Relay 1) STATUS: OFF | Manual Serial"
+    );
+
+    if (statusRelay1) {
+      mulaiRelay1Ms = millis();
+    } else {
+      kirimHistoriManual(false, mulaiRelay1Ms);
+    }
+  } else if (perintah == '2') {
+    statusRelay2 = !statusRelay2;
+    stopRelay2Ms = 0;
+    digitalWrite(RELAY2, statusRelay2 ? RELAY_ON : RELAY_OFF);
+
+    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
+    Serial.println(
+      statusRelay2
+        ? "Pompa Pestisida (Relay 2) STATUS: ON | Manual Serial"
+        : "Pompa Pestisida (Relay 2) STATUS: OFF | Manual Serial"
+    );
+
+    if (statusRelay2) {
+      mulaiRelay2Ms = millis();
+    } else {
+      kirimHistoriManual(true, mulaiRelay2Ms);
+    }
+  } else if (perintah == '0') {
+    bool relay1Nyala = statusRelay1;
+    bool relay2Nyala = statusRelay2;
+    statusRelay1 = false;
+    statusRelay2 = false;
+    stopRelay1Ms = 0;
+    stopRelay2Ms = 0;
+
+    digitalWrite(RELAY1, RELAY_OFF);
+    digitalWrite(RELAY2, RELAY_OFF);
+
+    Serial.println("\n>>> [UPDATE SEMPROT AIR & PESTISIDA] <<<");
+    Serial.println(
+      "Semua Pompa (Relay 1 & 2) STATUS: OFF | Manual Serial"
+    );
+
+    if (relay1Nyala) kirimHistoriManual(false, mulaiRelay1Ms);
+    if (relay2Nyala) kirimHistoriManual(true, mulaiRelay2Ms);
+  }
+}
+
+// ================= KONEKSI WIFI & API =================
+void mulaiWifi() {
+  waktuWifiRetry = millis();
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);
+  WiFi.disconnect(false);
+  delay(100);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.printf(
+    "[KONEKSI] Menghubungkan ke Wi-Fi '%s' ...\n",
+    WIFI_SSID
+  );
+}
+
+String artiKodeHttp(int kode) {
+  if (kode == HTTPC_ERROR_CONNECTION_REFUSED) {
+    return "Koneksi ditolak (server mati / port salah)";
+  }
+  if (kode == HTTPC_ERROR_CONNECTION_LOST) {
+    return "Koneksi terputus";
+  }
+  if (kode == HTTPC_ERROR_READ_TIMEOUT) {
+    return "Timeout (IP salah / firewall / hotspot)";
+  }
+  if (kode < 0) {
+    return "Tidak bisa menjangkau server (cek URL/Wi-Fi)";
+  }
+  if (kode == 404) {
+    return "URL API tidak ditemukan";
+  }
+  if (kode >= 500) {
+    return "Server error (cek Laravel / TiDB Cloud)";
+  }
+  return "HTTP " + String(kode);
+}
+
+bool mulaiHttp(
+  HTTPClient& http,
+  WiFiClientSecure& secureClient,
+  const String& url
+) {
+  http.setReuse(false);
+  http.setConnectTimeout(4000);
+  http.setTimeout(6000);
+  if (url.startsWith("https://")) {
+    secureClient.setInsecure();
+    return http.begin(secureClient, url);
+  }
+  return http.begin(url);
+}
+
+void setStatusApi(bool status, int kode, bool paksa) {
+  if (status) {
+    apiGagalBeruntun = 0;
+    if (!apiTerhubung) {
+      apiTerhubung = true;
+      Serial.println(
+        "\n>>> [KONEKSI] Wi-Fi: TERHUBUNG | API: TERHUBUNG <<<\n"
+      );
+    }
+    return;
+  }
+
+  apiGagalBeruntun++;
+  if ((paksa || apiGagalBeruntun >= 2) && apiTerhubung) {
+    apiTerhubung = false;
+    pollHttp.setReuse(false);
+    pollHttp.end();
+    pollSecureClient.stop();
+    const char* wf = (WiFi.status() == WL_CONNECTED)
+      ? "TERHUBUNG"
+      : "TIDAK TERHUBUNG";
+    Serial.printf(
+      "\n>>> [KONEKSI] Wi-Fi: %s | API: TIDAK TERHUBUNG (%d - %s) <<<\n\n",
+      wf,
+      kode,
+      artiKodeHttp(kode).c_str()
+    );
+  }
+}
+
+void cekApi() {
+  if (WiFi.status() != WL_CONNECTED) {
+    apiTerhubung = false;
+    return;
+  }
+
+  HTTPClient http;
+  WiFiClientSecure secureClient;
+  if (!mulaiHttp(http, secureClient, API_BASE_URL + "/health")) {
+    setStatusApi(false, -1, true);
+    Serial.println(
+      "[KONEKSI] Wi-Fi: TERHUBUNG | API: Gagal init HTTP"
+    );
+    return;
+  }
+  http.addHeader("Accept", "application/json");
+  http.addHeader("Connection", "close");
+  int kode = http.GET();
+  http.end();
+
+  if (kode == 200) {
+    Serial.printf(
+      "[KONEKSI] Cek %s/health -> OK (200)\n",
+      API_BASE_URL.c_str()
+    );
+    setStatusApi(true, kode, true);
+  } else {
+    setStatusApi(false, kode, true);
+    Serial.printf(
+      "[KONEKSI] Wi-Fi: TERHUBUNG | API: GAGAL (%d: %s)\n",
+      kode,
+      artiKodeHttp(kode).c_str()
+    );
+  }
+}
+
+void cekKoneksiWifiDanApi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (!wifiSudahTampil) {
+      wifiSudahTampil = true;
+      Serial.println("\n>>> [KONEKSI] Wi-Fi: TERHUBUNG <<<");
+      Serial.printf("    SSID       : %s\n", WIFI_SSID);
+      Serial.printf(
+        "    IP ESP32   : %s\n",
+        WiFi.localIP().toString().c_str()
+      );
+      Serial.printf("    Server API : %s\n", API_BASE_URL.c_str());
+      waktuCekApi = 0;
+      waktuPoll = millis();
+      waktuKirim = millis() - (SENSOR_SEND_MS / 2) + 3000;
+    }
+
+    if (!apiTerhubung &&
+        (waktuCekApi == 0 || millis() - waktuCekApi >= CEK_API_MS)) {
+      waktuCekApi = millis();
+      cekApi();
+      updateTimerRelay();
+    }
+    return;
+  }
+
+  if (wifiSudahTampil) {
+    Serial.println(
+      "\n>>> [KONEKSI] Wi-Fi: TERPUTUS | API: TIDAK TERHUBUNG <<<\n"
+    );
+  }
+  wifiSudahTampil = false;
+  apiTerhubung = false;
+  pollHttp.setReuse(false);
+  pollHttp.end();
+  pollSecureClient.stop();
+
+  if (millis() - waktuWifiRetry >= WIFI_RETRY_MS) {
+    Serial.printf(
+      "[KONEKSI] Wi-Fi belum terhubung (status=%d), mencoba ulang...\n",
+      WiFi.status()
+    );
+    mulaiWifi();
+  }
+}
+
+bool kirimPost(const String& path, const String& payload) {
+  if (WiFi.status() != WL_CONNECTED) return false;
+
+  HTTPClient http;
+  WiFiClientSecure secureClient;
