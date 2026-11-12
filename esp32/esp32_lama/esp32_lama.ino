@@ -539,3 +539,163 @@ bool kirimPost(const String& path, const String& payload) {
 
   HTTPClient http;
   WiFiClientSecure secureClient;
+  if (!mulaiHttp(http, secureClient, API_BASE_URL + path)) {
+    setStatusApi(false, -1, false);
+    return false;
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Accept", "application/json");
+  http.addHeader("Connection", "close");
+
+  int kode = http.POST(payload);
+  bool ok = kode >= 200 && kode < 300;
+  String info = ok
+    ? ("BERHASIL (" + String(kode) + ")")
+    : ("GAGAL (" + String(kode) + "): " + artiKodeHttp(kode));
+  Serial.printf("[API] POST %s -> %s\n", path.c_str(), info.c_str());
+  http.end();
+  setStatusApi(ok, kode, false);
+  return ok;
+}
+
+void kirimSensor() {
+  if (!kirimTahapDhtNext) {
+    kirimTahapDhtNext = true;
+    kirimPost(
+      "/sensor/soil-moisture",
+      "{\"moisture_percent\":" + String(kelembapanTanah) +
+      ",\"adc_value\":" + String(nilaiSoil) +
+      ",\"source\":\"esp32\"}"
+    );
+  } else {
+    kirimTahapDhtNext = false;
+    if (!isnan(suhu) && !isnan(kelembapanUdara)) {
+      kirimPost(
+        "/sensor/dht22",
+        "{\"temperature\":" + String(suhu, 1) +
+        ",\"humidity\":" + String(kelembapanUdara, 1) +
+        ",\"source\":\"esp32\"}"
+      );
+    }
+  }
+  updateTimerRelay();
+}
+
+void nyalakanRelay(int nomor, int detik, const char* sumber) {
+  unsigned long sekarang = millis();
+  if (nomor == 1) {
+    unsigned long sisaMs = (statusRelay1 && stopRelay1Ms > sekarang)
+      ? (stopRelay1Ms - sekarang)
+      : 0;
+    statusRelay1 = true;
+    digitalWrite(RELAY1, RELAY_ON);
+    stopRelay1Ms = sekarang + sisaMs + detik * 1000UL;
+    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
+    Serial.printf(
+      "Pompa Air (Relay 1) STATUS: ON %d detik | Sumber: %s\n\n",
+      detik,
+      sumber
+    );
+  } else {
+    unsigned long sisaMs = (statusRelay2 && stopRelay2Ms > sekarang)
+      ? (stopRelay2Ms - sekarang)
+      : 0;
+    statusRelay2 = true;
+    digitalWrite(RELAY2, RELAY_ON);
+    stopRelay2Ms = sekarang + sisaMs + detik * 1000UL;
+    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
+    Serial.printf(
+      "Pompa Pestisida (Relay 2) STATUS: ON %d detik | Sumber: %s\n\n",
+      detik,
+      sumber
+    );
+  }
+}
+
+void updateTimerRelay() {
+  if (stopRelay1Ms != 0 && millis() >= stopRelay1Ms) {
+    stopRelay1Ms = 0;
+    statusRelay1 = false;
+    digitalWrite(RELAY1, RELAY_OFF);
+    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
+    Serial.println("Pompa Air (Relay 1) STATUS: OFF (selesai)\n");
+  }
+  if (stopRelay2Ms != 0 && millis() >= stopRelay2Ms) {
+    stopRelay2Ms = 0;
+    statusRelay2 = false;
+    digitalWrite(RELAY2, RELAY_OFF);
+    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
+    Serial.println("Pompa Pestisida (Relay 2) STATUS: OFF (selesai)\n");
+  }
+}
+
+String ambilNilai(const String& json, const String& key) {
+  int i = json.indexOf("\"" + key + "\"");
+  if (i < 0) return "";
+  i = json.indexOf(':', i);
+  if (i < 0) return "";
+  i++;
+  while (i < (int)json.length() &&
+         (json[i] == ' ' || json[i] == '\t')) {
+    i++;
+  }
+  if (i >= (int)json.length()) return "";
+
+  if (json[i] == '"') {
+    i++;
+    String out = "";
+    while (i < (int)json.length()) {
+      char c = json[i];
+      if (c == '\\' && i + 1 < (int)json.length()) {
+        i++;
+        out += json[i];
+      } else if (c == '"') {
+        break;
+      } else {
+        out += c;
+      }
+      i++;
+    }
+    return out;
+  }
+
+  int j = i;
+  while (j < (int)json.length() &&
+         json[j] != ',' &&
+         json[j] != '}') {
+    j++;
+  }
+  String v = json.substring(i, j);
+  v.trim();
+  if (v == "null") return "";
+  return v;
+}
+
+void cekPerintahWeb() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  String url = API_BASE_URL + "/esp32/poll";
+  pollHttp.setReuse(true);
+  pollHttp.setConnectTimeout(3000);
+  pollHttp.setTimeout(4000);
+
+  bool began = false;
+  if (url.startsWith("https://")) {
+    pollSecureClient.setInsecure();
+    began = pollHttp.begin(pollSecureClient, url);
+  } else {
+    began = pollHttp.begin(url);
+  }
+
+  if (!began) {
+    pollHttp.setReuse(false);
+    pollHttp.end();
+    pollSecureClient.stop();
+    setStatusApi(false, -1, false);
+    return;
+  }
+  pollHttp.addHeader("Accept", "application/json");
+
+  int kode = pollHttp.GET();
+  updateTimerRelay();
+
