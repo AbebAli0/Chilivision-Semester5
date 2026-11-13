@@ -1244,3 +1244,1048 @@
         }
     </style>
 </head>
+<body>
+<main class="shell">
+    <nav class="topbar">
+        <div class="brand">
+            <span class="brand-mark" style="padding:0;overflow:hidden;"><img src="{{ asset('images/chilivision-logo.svg') }}" alt="Logo ChiliVision" style="width:100%;height:100%;object-fit:cover;display:block;"></span>
+            <div>
+                <div>Chili Vision · Deteksi &amp; Klasifikasi Penyakit Pada Daun Cabai</div>
+            </div>
+        </div>
+        <div class="top-badges">
+            <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Ubah Tema Terang atau Gelap">
+                <span class="if-light">🌙 Dark Mode</span>
+                <span class="if-dark">☀️ Light Mode</span>
+            </button>
+            <span class="badge laravel">⚡ Laravel Full-Stack</span>
+            <span class="badge mysql">🗄️ TiDB Cloud Connected</span>
+            <span class="esp32-pill" id="navEsp32Badge"><span class="esp32-dot"></span><span>ESP32: Memuat...</span></span>
+            <a class="badge" href="api" target="_blank">📚 Dokumentasi &amp; Playground API (/api) ↗</a>
+            <a class="badge" href="api?format=json" target="_blank">📄 Raw JSON Spec ↗</a>
+            <a class="badge" href="api/dashboard/state" target="_blank">📡 Live State JSON ↗</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div>
+            <span class="eyebrow">Computer Vision · IoT Sensor · Smart Chatbot</span>
+            <h1>Monitoring Tanaman Cabai Terintegrasi Database TiDB Cloud.</h1>
+        </div>
+    </section>
+
+    <!-- 4 Real-Time Summary Cards -->
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-header">
+                    <span>🍃 DETEKSI DAUN TERAKHIR</span>
+                    <span class="kpi-badge" id="kpiLeafCount">0 tersimpan</span>
+                </div>
+                <div class="kpi-val" id="kpiLeafName">Memuat...</div>
+                <div class="kpi-sub" id="kpiLeafMeta">Jika daun tidak berubah, gambar tidak dikirim ke database.</div>
+            </div>
+            <div><span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span></div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-header">
+                    <span>🌱 SENSOR SOIL MOISTURE</span>
+                    <span class="kpi-badge" id="kpiSoilStatus">Optimal</span>
+                </div>
+                <div class="kpi-val" id="kpiSoilVal">-- %</div>
+                <div class="kpi-sub" id="kpiSoilMeta">Menunggu pembacaan sensor...</div>
+            </div>
+            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-header">
+                    <span>🌡️ SENSOR DHT22 (SUHU &amp; UDARA)</span>
+                    <span class="kpi-badge" id="kpiDhtStatus">Optimal</span>
+                </div>
+                <div class="kpi-val" id="kpiDhtVal">-- °C / -- %</div>
+                <div class="kpi-sub" id="kpiDhtMeta">Menunggu pembacaan sensor...</div>
+            </div>
+            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+        </div>
+
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-header">
+                    <span>⏱️ HISTORI PENYEMPROTAN TERAKHIR</span>
+                    <span class="kpi-badge">TiDB Cloud Log</span>
+                </div>
+                <div class="kpi-sub" style="margin-top:4px;">
+                    💧 <strong>Air:</strong> <span id="kpiLastWater">Belum ada</span><br>
+                    🧪 <strong>Pestisida:</strong> <span id="kpiLastPesticide">Belum ada</span>
+                </div>
+            </div>
+            <div><span class="pipeline-tag">🎛️ Web Button &amp; Chatbot Command</span></div>
+        </div>
+    </section>
+
+    <!-- Workspace: Left = Computer Vision, Right = Chatbot & Last Leaf DB Card -->
+    <section class="workspace">
+        <!-- Computer Vision Card -->
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>📷 1. Computer Vision — API Gambar Daun</h2>
+                    <p class="card-subtitle">Deteksi terakhir daun cabai. Jika daun tidak berubah, gambar tidak dikirim ulang ke database TiDB Cloud.</p>
+                </div>
+                <span class="pill" id="cvPill">CV Ready</span>
+            </div>
+
+            <div class="preview">
+                <video id="video" autoplay playsinline hidden></video>
+                <img id="uploadedImage" alt="Gambar upload dengan hasil deteksi" hidden>
+                <canvas id="overlay" class="overlay" hidden></canvas>
+                <div id="placeholder" class="placeholder">
+                    <div class="placeholder-icon">🍃</div>
+                    <strong>Belum ada gambar daun untuk dianalisis</strong>
+                    Aktifkan kamera langsung atau upload foto daun cabai dari perangkat Anda.
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div>
+                    <label class="field-label" for="cameraSelect">🎥 Sumber kamera</label>
+                    <select id="cameraSelect"><option>Memuat kamera...</option></select>
+                </div>
+                <div>
+                    <label class="field-label" for="model">🧠 Model analisis AI (ONNX)</label>
+                    @php
+                        $modelsDir = base_path('models');
+                        $initialModels = [
+                            [
+                                'id' => 'yolov8n-chili',
+                                'name' => 'Yolov8n (Deteksi Penyakit Daun Cabai)',
+                                'available' => is_file($modelsDir . DIRECTORY_SEPARATOR . 'yolov8n_chili.onnx'),
+                            ],
+                            [
+                                'id' => 'cnn-5ch-chili',
+                                'name' => 'CNN (Klasifikasi Penyakit Daun Cabai)',
+                                'available' => is_file($modelsDir . DIRECTORY_SEPARATOR . 'cnn_5ch_7kelas_hard_negative.onnx'),
+                            ],
+                        ];
+                    @endphp
+                    <select id="model">
+                        @foreach($initialModels as $idx => $m)
+                            <option value="{{ $m['id'] }}" {{ !$m['available'] ? 'disabled' : '' }} {{ $idx === 0 ? 'selected' : '' }}>
+                                {{ $m['name'] }}{{ !$m['available'] ? ' — belum tersedia' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="threshold-box">
+                <div class="threshold-header">
+                    <label class="field-label" for="thresholdSlider" style="margin-bottom:0;">🎯 Batas Keyakinan (Confidence Threshold)</label>
+                    <div class="threshold-actions">
+                        <span class="threshold-badge" id="thresholdValueLabel">45%</span>
+                        <button type="button" class="threshold-reset-btn" id="thresholdResetBtn" title="Kembalikan ke nilai rekomendasi model">↺ Default</button>
+                    </div>
+                </div>
+                <input
+                    type="range"
+                    id="thresholdSlider"
+                    class="threshold-slider"
+                    min="0.10"
+                    max="0.95"
+                    step="0.05"
+                    value="0.25"
+                    aria-valuetext="25%"
+                >
+                <div class="threshold-hint">
+                    <span>10% (Sensitif)</span>
+                    <span id="thresholdModeHint">Rekomendasi YOLOv8n: 25% · CNN: 50%</span>
+                    <span>95% (Ketat)</span>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <button id="camera">📷 Aktifkan kamera</button>
+                <button id="predict" class="secondary" disabled>🔍 Mulai deteksi langsung</button>
+            </div>
+
+            <div class="upload-zone">
+                <label class="field-label" for="upload">📁 Atau uji API Gambar Daun dengan upload foto</label>
+                <input id="upload" type="file" accept="image/jpeg,image/png,image/webp">
+                <div class="toolbar" style="margin-top:10px;">
+                    <button id="uploadPredict" class="secondary">📤 Upload &amp; Analisis Daun</button>
+                    <button id="showCamera" class="secondary" hidden>🎥 Kembali ke Kamera</button>
+                </div>
+            </div>
+
+            <p class="status" id="status">✅ Model AI ONNX siap digunakan.</p>
+            <div class="db-banner" id="dbStatusBanner">
+                Status Database Daun: Menunggu deteksi gambar daun...
+            </div>
+            <div class="result" id="result">Hasil deteksi bounding box / klasifikasi penyakit akan tampil di sini.</div>
+        </div>
+
+        <!-- Right Column: Chatbot & Latest Leaf in DB -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+            <!-- Smart Chatbot Card -->
+            <div class="card">
+                <div class="card-title">
+                    <div>
+                        <h2>🤖 Smart Chatbot &amp; Command Center</h2>
+                        <p class="card-subtitle">Menerima data sensor otomatis (<code>Web &gt; Chatbot &gt; Database</code>) &amp; perintah semprot manual.</p>
+                    </div>
+                    <span class="pill">Online</span>
+                </div>
+
+                <div class="chat-box">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-bubble bot">Memuat pesan chatbot dari database TiDB Cloud...</div>
+                    </div>
+                    <div class="chat-quick-chips">
+                        <button type="button" class="chip" onclick="sendQuickCommand('/status')">📊 Status</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('model')">🧠 Model</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/semprot_air')">💧 Semprot Air (5s)</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/semprot_pestisida')">🧪 Semprot Pestisida (5s)</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/cek_daun')">🍃 Cek Daun</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/cek_tanah')">🌱 Cek Tanah</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/cek_suhu')">🌡️ Cek Suhu</button>
+                        <button type="button" class="chip" onclick="sendQuickCommand('/histori')">⏱️ Histori</button>
+                    </div>
+                    <form id="chatForm" class="chat-input-row" onsubmit="handleChatSubmit(event)">
+                        <input type="text" id="chatInput" placeholder="Ketik 'model', 'model yolov8n', 'semprot air', atau 'status'..." autocomplete="off">
+                        <button type="submit" style="width:auto;padding:10px 18px;">📨 Kirim</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Latest Saved Leaf in TiDB Cloud Card -->
+            <div class="card">
+                <div class="card-title">
+                    <div>
+                        <h2>🍃 Deteksi Daun Terakhir di TiDB Cloud</h2>
+                        <p class="card-subtitle">Tabel <code>leaf_detections</code> (hanya tersimpan saat daun berubah)</p>
+                    </div>
+                </div>
+                <div id="latestLeafDbBox" style="display:flex;gap:14px;align-items:center;">
+                    <img id="latestLeafThumb" src="" alt="Thumb" hidden style="width:auto;height:auto;max-width:110px;max-height:110px;object-fit:contain;border-radius:12px;border:2px solid var(--line);">
+                    <div style="font-size:.83rem;line-height:1.55;color:var(--text-main);" id="latestLeafInfo">
+                        Belum ada gambar daun yang disimpan ke database.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bottom 3 Cards: Manual Spray Controls + Soil Moisture API + DHT11 API -->
+    <section class="iot-grid">
+        <!-- Manual Spray & History Card -->
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>💦 Penyemprotan Manual &amp; Histori</h2>
+                    <p class="card-subtitle">Tombol Web &amp; Histori Terakhir Air / Pestisida</p>
+                </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label class="field-label" for="sprayDuration">⏱️ Durasi Penyemprotan Manual (detik)</label>
+                <input type="number" id="sprayDuration" value="5" min="1" max="60">
+            </div>
+
+            <div class="toolbar" style="margin-bottom:14px;">
+                <button type="button" class="water-btn" id="btnManualWater" onclick="triggerManualSprayFromWeb('water')">
+                    💧 Semprot Air Manual
+                </button>
+                <button type="button" class="pesticide-btn" id="btnManualPesticide" onclick="triggerManualSprayFromWeb('pesticide')">
+                    🧪 Semprot Pestisida Manual
+                </button>
+            </div>
+
+            <div class="spray-box">
+                <h4>💧 Histori Penyemprotan Terakhir Air (Otomatis Saat Tanah Kering &lt;30% &amp; Manual)</h4>
+                <div class="spray-meta" id="waterHistoryBox">Memuat dari TiDB Cloud...</div>
+            </div>
+
+            <div class="spray-box" style="margin-bottom:0;">
+                <h4 id="pesticideScheduleHeading">🧪 Histori &amp; Jadwal Pestisida (Tiap 5 Hari Sekali)</h4>
+                <div class="spray-meta" id="pesticideHistoryBox">Memuat dari TiDB Cloud...</div>
+                <div id="pesticidePolicyNote" style="margin-top:8px;padding:8px 11px;border-radius:9px;background:rgba(124, 58, 237, 0.12);color:var(--text-main);font-size:.74rem;font-weight:600;border:1px solid rgba(124, 58, 237, 0.3);">
+                    ℹ️ Kebijakan Pestisida &amp; Air: Saat penyakit daun terdeteksi, bot mengirim <strong>Notifikasi Konfirmasi di Telegram</strong>. Penyemprotan otomatis pestisida berjalan <strong>Tiap 5 Hari Sekali (120 Jam)</strong>, sedangkan <strong>Air otomatis menyemprot saat Tanah Kering (&lt;30%)</strong>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Soil Moisture Sensor Card -->
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>🌱 API Sensor Soil Moisture</h2>
+                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                </div>
+            </div>
+
+            <div class="spray-box">
+                <h4>🌱 Pembacaan Soil Moisture Terakhir</h4>
+                <div class="spray-meta" id="soilDetailBox">Memuat...</div>
+            </div>
+
+            <form onsubmit="submitSoilMoisture(event)">
+                <label class="field-label" for="inputSoilMoisture">📡 Kirim / Uji Data Soil Moisture (%) ke API</label>
+                <div class="toolbar" style="margin-top:6px;">
+                    <input type="number" step="0.1" min="0" max="100" id="inputSoilMoisture" value="27.5" required placeholder="0 - 100%">
+                    <button type="submit" class="secondary">🌱 Kirim Soil Moisture</button>
+                </div>
+                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/soil-moisture</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>soil_moisture_readings</code>.</p>
+            </form>
+        </div>
+
+        <!-- DHT22 Sensor Card -->
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>🌡️ API Sensor DHT22</h2>
+                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                </div>
+            </div>
+
+            <div class="spray-box">
+                <h4>🌡️ Pembacaan DHT22 Terakhir</h4>
+                <div class="spray-meta" id="dhtDetailBox">Memuat...</div>
+            </div>
+
+            <form onsubmit="submitDht11(event)">
+                <label class="field-label">📡 Kirim / Uji Data Suhu (°C) &amp; Kelembapan Udara (%) ke API</label>
+                <div class="toolbar" style="margin-top:6px;">
+                    <input type="number" step="0.1" id="inputDhtTemp" value="31.2" required placeholder="Suhu (°C)">
+                    <input type="number" step="0.1" min="0" max="100" id="inputDhtHum" value="68.0" required placeholder="Humidity (%)">
+                </div>
+                <button type="submit" class="secondary" style="margin-top:10px;">🌡️ Kirim Data DHT22</button>
+                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/dht22</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>dht11_readings</code>.</p>
+            </form>
+        </div>
+    </section>
+
+    <!-- Monitoring Hardware ESP32 & Background Scheduler + Ekspor Laporan -->
+    <section class="hardware-banner">
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>🔌 Monitoring Hardware ESP32 &amp; Background Scheduler</h2>
+                    <p class="card-subtitle">Status heartbeat mikrokontroler via <code>/api/esp32/poll</code> &amp; pembacaan sensor + pengecekan jadwal latar belakang.</p>
+                </div>
+                <span class="esp32-pill" id="esp32StatusPill"><span class="esp32-dot"></span><span id="esp32StatusText">Memuat...</span></span>
+            </div>
+            <div class="spray-box" style="margin-bottom:0;">
+                <div class="spray-meta" id="esp32HardwareDetail">Memuat status perangkat ESP32...</div>
+                <div class="spray-meta" id="systemServicesSummary" style="margin-top:6px;">Memuat status layanan AI &amp; Bot...</div>
+                <p style="font-size:.74rem;color:var(--text-muted);margin:8px 0 0;">
+                    ⏱️ Background Scheduler: <code>php artisan schedule:work</code> menjalankan <code>chilivision:check-schedule</code> setiap menit (memicu jadwal pestisida otomatis &amp; mengirim peringatan jika ESP32 offline &gt; 45 detik).
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>📑 Unduh Laporan Data (CSV / Excel)</h2>
+                    <p class="card-subtitle">Ekspor riwayat sensor, deteksi penyakit daun, dan log penyemprotan langsung dari TiDB Cloud.</p>
+                </div>
+            </div>
+            <div class="export-grid">
+                <a class="export-btn" href="api/reports/export/soil" download>📥 Laporan Soil Moisture</a>
+                <a class="export-btn" href="api/reports/export/dht22" download>📥 Laporan DHT22 (Suhu)</a>
+                <a class="export-btn" href="api/reports/export/leaf" download>📥 Laporan Deteksi Daun</a>
+                <a class="export-btn" href="api/reports/export/spray" download>📥 Laporan Penyemprotan</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Visualisasi Data Tren Sensor & Distribusi Penyakit Daun -->
+    <section class="analytics-grid">
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>📈 Grafik Tren Kelembapan Tanah (Soil Moisture)</h2>
+                    <p class="card-subtitle">20 pembacaan terakhir (%) beserta ambang batas penyiraman otomatis &lt;30%.</p>
+                </div>
+            </div>
+            <div class="chart-frame">
+                <div id="soilChartWrap" class="chart-plot-wrap" tabindex="0" aria-label="Grafik tren kelembapan tanah interaktif">
+                    <svg id="soilChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren kelembapan tanah"></svg>
+                    <div id="soilChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
+                </div>
+                <div class="chart-legend" id="soilChartLegend">Memuat data grafik...</div>
+                <div class="chart-inspector" id="soilChartInspector">
+                    <span id="soilChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
+                    <div class="chart-nav-group">
+                        <button type="button" class="chart-nav-btn" data-chart-step="soil:-1" title="Titik sebelumnya (Panah Kiri)">◀</button>
+                        <button type="button" class="chart-nav-btn" data-chart-step="soil:1" title="Titik berikutnya (Panah Kanan)">▶</button>
+                        <button type="button" class="chart-nav-btn" data-chart-reset="soil" title="Reset pilihan titik">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <div>
+                    <h2>🌡️ Grafik Tren Suhu &amp; Kelembapan Udara (DHT22)</h2>
+                    <p class="card-subtitle">20 pembacaan terakhir sensor suhu (°C) dan kelembapan udara (%).</p>
+                </div>
+            </div>
+            <div class="chart-frame">
+                <div id="dhtChartWrap" class="chart-plot-wrap" tabindex="0" aria-label="Grafik tren suhu dan kelembapan udara interaktif">
+                    <svg id="dhtChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren DHT22"></svg>
+                    <div id="dhtChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
+                </div>
+                <div class="chart-legend" id="dhtChartLegend">Memuat data grafik...</div>
+                <div class="chart-inspector" id="dhtChartInspector">
+                    <span id="dhtChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
+                    <div class="chart-nav-group">
+                        <button type="button" class="chart-nav-btn" data-chart-step="dht:-1" title="Titik sebelumnya (Panah Kiri)">◀</button>
+                        <button type="button" class="chart-nav-btn" data-chart-step="dht:1" title="Titik berikutnya (Panah Kanan)">▶</button>
+                        <button type="button" class="chart-nav-btn" data-chart-reset="dht" title="Reset pilihan titik">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom:22px;">
+        <div class="card-title">
+            <div>
+                <h2>📊 Ringkasan Statistik Deteksi Daun &amp; Penyemprotan</h2>
+                <p class="card-subtitle">Distribusi kelas deteksi daun yang tersimpan di TiDB Cloud dan total aktivitas penyemprotan.</p>
+            </div>
+            <span class="badge" id="sprayTotalsBadge">💧 0 Air · 🧪 0 Pestisida</span>
+        </div>
+        <div id="leafStatsList" class="spray-meta">Memuat ringkasan statistik...</div>
+    </section>
+
+    <!-- Endpoint API Documentation Table -->
+    <section class="card">
+        <div class="card-title">
+            <div>
+                <h2>🔗 Daftar Lengkap Endpoint REST API Laravel + TiDB Cloud</h2>
+                <p class="card-subtitle">Seluruh endpoint aktif dan terhubung ke database TiDB Cloud <code>{{ config('database.connections.mysql.database') }}</code></p>
+            </div>
+            <a class="badge" href="api" target="_blank">📚 Buka Halaman Dokumentasi Lengkap (/api) ↗</a>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="api-table">
+                <thead>
+                <tr>
+                    <th>Kategori Endpoint API</th>
+                    <th>Method &amp; URL (Beserta Alias)</th>
+                    <th>Handler &amp; Alur Data</th>
+                    <th>Aksi / JSON</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><strong>0. Info, Health &amp; Ringkasan Dashboard</strong></td>
+                    <td>
+                        <code>GET /api</code> · <code>GET /api/health</code><br>
+                        <code>GET /api/models</code> · <code>GET /api/cameras</code><br>
+                        <code>GET /api/dashboard/state</code>
+                    </td>
+                    <td>Status server Laravel, daftar model ONNX, kamera, dan state gabungan seluruh sensor/histori.</td>
+                    <td><a href="api" target="_blank">Buka /api ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>1. API Gambar Daun &amp; Deteksi Penyakit</strong></td>
+                    <td>
+                        <code>GET /api/leaf-image</code> (alias: <code>/api/gambar-daun</code>)<br>
+                        <code>POST /api/leaf-image</code> (alias: <code>/api/gambar-daun</code>, <code>/api/predict</code>, <code>/predict</code>)
+                    </td>
+                    <td>Deteksi terakhir daun; jika daun tidak berubah (kondisi/hash sama), gambar tidak dikirim ulang ke database.</td>
+                    <td><a href="api/leaf-image" target="_blank">Buka JSON ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>2. API Sensor Soil Moisture</strong></td>
+                    <td>
+                        <code>GET /api/sensor/soil-moisture</code> (alias: <code>/api/soil-moisture</code>)<br>
+                        <code>POST /api/sensor/soil-moisture</code> (alias: <code>/api/soil-moisture</code>)
+                    </td>
+                    <td>Mengirim data kelembapan tanah terakhir dengan alur <strong>Web &gt; Chatbot &gt; Database</strong> (otomatis semprot air jika &lt;30%).</td>
+                    <td><a href="api/sensor/soil-moisture" target="_blank">Buka JSON ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>3. API Sensor DHT22 (Suhu &amp; Udara)</strong></td>
+                    <td>
+                        <code>GET /api/sensor/dht22</code> (alias: <code>/api/dht22</code>, <code>/api/sensor/dht11</code>)<br>
+                        <code>POST /api/sensor/dht22</code> (alias: <code>/api/dht22</code>, <code>/api/sensor/dht11</code>)
+                    </td>
+                    <td>Mengirim data suhu &amp; kelembapan udara terakhir dengan alur <strong>Web &gt; Chatbot &gt; Database</strong>.</td>
+                    <td><a href="api/sensor/dht22" target="_blank">Buka JSON ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>4. API Histori Penyemprotan Pestisida</strong></td>
+                    <td>
+                        <code>GET /api/spray/pesticide/history</code> (alias: <code>/api/histori-pestisida</code>)<br>
+                        <code>POST /api/spray/pesticide/history</code> (alias: <code>/api/histori-pestisida</code>)
+                    </td>
+                    <td>Menyimpan &amp; menampilkan waktu terakhir pestisida disemprot beserta jadwal rutin dari tabel <code>spray_histories</code>.</td>
+                    <td><a href="api/spray/pesticide/history" target="_blank">Buka JSON ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>5. API Histori Penyemprotan Air</strong></td>
+                    <td>
+                        <code>GET /api/spray/water/history</code> (alias: <code>/api/histori-air</code>)<br>
+                        <code>POST /api/spray/water/history</code> (alias: <code>/api/histori-air</code>)
+                    </td>
+                    <td>Menyimpan &amp; menampilkan waktu terakhir air disemprot dari tabel <code>spray_histories</code>.</td>
+                    <td><a href="api/spray/water/history" target="_blank">Buka JSON ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>6. API Penyemprotan Manual (Air &amp; Pestisida)</strong></td>
+                    <td>
+                        <code>POST /api/spray/manual</code> (alias: <code>/api/penyemprotan-manual</code>)
+                    </td>
+                    <td>Implementasi tombol di web &amp; command manual untuk menyalakan pompa air/pestisida dan memasukkannya ke antrean ESP32.</td>
+                    <td><a href="api#group-6_penyemprotan_manual" target="_blank">Uji di /api ↗</a></td>
+                </tr>
+                <tr>
+                    <td><strong>7. API Chatbot, ESP32 Polling &amp; Telegram Webhook</strong></td>
+                    <td>
+                        <code>GET /api/chatbot/messages</code> · <code>POST /api/chatbot/message</code><br>
+                        <code>GET /api/esp32/poll</code> (alias: <code>/api/spray/pending</code>)<br>
+                        <code>POST /api/telegram/webhook</code>
+                    </td>
+                    <td>Sinkronisasi pesan chatbot, polling perintah nyala pompa oleh mikrokontroler ESP32, dan webhook Bot Telegram.</td>
+                    <td><a href="api/esp32/poll?preview=1" target="_blank">Cek Poll ↗</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="footer">🌶️ ChiliVision · Laravel + TiDB Cloud Computer Vision &amp; Smart IoT Agriculture System</p>
+</main>
+
+<script>
+    const BASE_URL = window.location.pathname.startsWith('/chilivision') ? '/chilivision' : '';
+    const API_BASE = BASE_URL + '/api';
+
+    const video = document.getElementById("video"),
+          uploadedImage = document.getElementById("uploadedImage"),
+          overlay = document.getElementById("overlay"),
+          overlayContext = overlay.getContext("2d"),
+          placeholder = document.getElementById("placeholder"),
+          cameraSelect = document.getElementById("cameraSelect"),
+          camera = document.getElementById("camera"),
+          predict = document.getElementById("predict"),
+          upload = document.getElementById("upload"),
+          uploadPredict = document.getElementById("uploadPredict"),
+          showCamera = document.getElementById("showCamera"),
+          model = document.getElementById("model"),
+          thresholdSlider = document.getElementById("thresholdSlider"),
+          thresholdValueLabel = document.getElementById("thresholdValueLabel"),
+          thresholdResetBtn = document.getElementById("thresholdResetBtn"),
+          thresholdModeHint = document.getElementById("thresholdModeHint"),
+          status = document.getElementById("status"),
+          result = document.getElementById("result"),
+          dbStatusBanner = document.getElementById("dbStatusBanner");
+
+    let stream = null,
+        detectionTimer = null,
+        requestInFlight = false,
+        uploadObjectUrl = null,
+        userCustomThreshold = false;
+
+    function isLiveModel() {
+        return model.value === "yolov8n-chili";
+    }
+    function getRecommendedThreshold() {
+        return isLiveModel() ? 0.25 : 0.50;
+    }
+    function syncSliderVisual() {
+        if (!thresholdSlider) return;
+        const val = parseFloat(thresholdSlider.value || getRecommendedThreshold());
+        const pct = Math.round(val * 100) + "%";
+        thresholdSlider.style.setProperty("--attr-min", thresholdSlider.min || 0.10);
+        thresholdSlider.style.setProperty("--attr-max", thresholdSlider.max || 0.95);
+        thresholdSlider.style.setProperty("--control-value", val);
+        thresholdSlider.setAttribute("aria-valuetext", pct);
+        if (thresholdValueLabel) {
+            thresholdValueLabel.textContent = pct;
+        }
+        if (thresholdModeHint) {
+            thresholdModeHint.textContent = isLiveModel()
+                ? `Aktif: ${pct} (Rekomendasi YOLOv8n: 25%)`
+                : `Aktif: ${pct} (Rekomendasi CNN: 50%)`;
+        }
+    }
+    function getThreshold() {
+        if (thresholdSlider && thresholdSlider.value) {
+            return parseFloat(thresholdSlider.value).toFixed(2);
+        }
+        return getRecommendedThreshold().toFixed(2);
+    }
+    function updateMode(resetToRecommended = false) {
+        if (isLiveModel()) {
+            predict.textContent = "🔍 Mulai deteksi langsung";
+        } else {
+            predict.textContent = "📸 Ambil foto & klasifikasi";
+        }
+        if (thresholdSlider && (resetToRecommended || !userCustomThreshold)) {
+            thresholdSlider.value = getRecommendedThreshold().toFixed(2);
+        }
+        syncSliderVisual();
+        if (detectionTimer) stopDetection();
+        clearBoxes();
+    }
+
+    if (thresholdSlider) {
+        thresholdSlider.addEventListener("input", () => {
+            userCustomThreshold = true;
+            syncSliderVisual();
+        });
+    }
+    if (thresholdResetBtn) {
+        thresholdResetBtn.addEventListener("click", () => {
+            userCustomThreshold = false;
+            if (thresholdSlider) {
+                thresholdSlider.value = getRecommendedThreshold().toFixed(2);
+            }
+            syncSliderVisual();
+        });
+    }
+
+    // Set mode awal dari daftar model yang sudah dirender langsung oleh Laravel Blade
+    updateMode(true);
+
+    // Sinkronisasi daftar model dari API (aman untuk Port Forwarding / DevTunnels)
+    async function syncModels() {
+        try {
+            const r = await fetch(API_BASE + "/models", {
+                headers: { "Accept": "application/json" },
+                credentials: "same-origin"
+            });
+            if (!r.ok) return;
+            const items = await r.json();
+            if (!Array.isArray(items) || !items.length) return;
+            const currentVal = model.value;
+            model.innerHTML = "";
+            items.forEach(x => {
+                const o = document.createElement("option");
+                o.value = x.id;
+                o.textContent = x.name + (x.available ? "" : " — belum tersedia");
+                o.disabled = !x.available;
+                model.appendChild(o);
+            });
+            const keepCurrent = items.find(x => x.id === currentVal && x.available);
+            const active = keepCurrent || items.find(x => x.available);
+            if (active) model.value = active.id;
+            updateMode();
+            status.textContent = active ? "✅ Model AI ONNX siap digunakan." : "⚠️ Model belum ditemukan.";
+        } catch (err) {
+            // Jika tunnel sedang sibuk, tetap gunakan daftar model bawaan yang sudah ter-render di HTML
+            console.warn("Menggunakan daftar model SSR:", err);
+        }
+    }
+    syncModels();
+
+    model.addEventListener("change", () => {
+        userCustomThreshold = false;
+        updateMode(true);
+    });
+
+    async function loadCameras() {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                cameraSelect.innerHTML = "<option value=''>Browser memblokir kamera (gunakan localhost atau HTTPS)</option>";
+                return;
+            }
+            const prevValue = cameraSelect.value;
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter(x => x.kind === "videoinput");
+            cameraSelect.innerHTML = "";
+            cameras.forEach((x, index) => {
+                const o = document.createElement("option");
+                o.value = x.deviceId;
+                o.textContent = x.label || `Kamera ${index + 1}`;
+                cameraSelect.appendChild(o);
+            });
+            if (prevValue && cameras.some(c => c.deviceId === prevValue)) {
+                cameraSelect.value = prevValue;
+            }
+            if (!cameras.length) cameraSelect.innerHTML = "<option value=''>Kamera tidak terdeteksi</option>";
+        } catch (e) {
+            cameraSelect.innerHTML = "<option value=''>Izinkan akses kamera di browser</option>";
+        }
+    }
+    loadCameras();
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener("devicechange", loadCameras);
+    }
+
+    async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Akses kamera membutuhkan localhost, 127.0.0.1, atau HTTPS.");
+        }
+        resetPreview();
+        const deviceId = cameraSelect.value;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: deviceId ? { deviceId: { exact: deviceId } } : true
+            });
+        } catch (err) {
+            if (deviceId && (err.name === "OverconstrainedError" || err.name === "NotFoundError")) {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            } else {
+                throw err;
+            }
+        }
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        video.hidden = false;
+        uploadedImage.hidden = true;
+        overlay.hidden = false;
+        placeholder.hidden = true;
+        showCamera.hidden = true;
+        predict.disabled = false;
+        camera.textContent = "⏹️ Matikan kamera";
+        camera.onclick = stop;
+    }
+
+    function formatCameraError(e) {
+        if (!e) return "Kamera tidak dapat diakses.";
+        if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+            return "Izin kamera ditolak browser. Klik ikon gembok/kamera di address bar lalu pilih Allow.";
+        }
+        if (e.name === "NotReadableError" || e.name === "TrackStartError") {
+            return "Webcam sedang dipakai aplikasi lain (Zoom/Meet/Camera/OBS) atau driver bermasalah.";
+        }
+        if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
+            return "Webcam tidak ditemukan oleh browser. Cek kabel USB atau Device Manager.";
+        }
+        return e.message || "Kamera tidak dapat diakses.";
+    }
+
+    camera.onclick = async () => {
+        try {
+            await startCamera();
+            await loadCameras();
+        } catch (e) {
+            status.textContent = formatCameraError(e);
+        }
+    };
+
+    function stopCameraForUpload() {
+        stopDetection();
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        video.pause();
+        video.srcObject = null;
+        video.hidden = true;
+        predict.disabled = true;
+        camera.textContent = "📷 Aktifkan kamera";
+        camera.onclick = async () => {
+            try { await startCamera(); } catch (e) { status.textContent = "Kamera tidak dapat diakses."; }
+        };
+    }
+
+    function resetPreview() {
+        stopCameraForUpload();
+        if (uploadObjectUrl) {
+            URL.revokeObjectURL(uploadObjectUrl);
+            uploadObjectUrl = null;
+        }
+        uploadedImage.removeAttribute("src");
+        uploadedImage.hidden = true;
+        video.hidden = true;
+        overlay.hidden = true;
+        placeholder.hidden = false;
+        showCamera.hidden = true;
+        clearBoxes();
+        upload.value = "";
+    }
+
+    function stop() { resetPreview(); }
+    function clearBoxes() { overlayContext.clearRect(0, 0, overlay.width, overlay.height); }
+
+    function formatDiseaseName(name) {
+        const raw = String(name || '').trim();
+        if (!raw) return '';
+        if (raw.includes('_')) {
+            return raw.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+                .replace(/\b\w/g, c => c.toUpperCase());
+        }
+        return raw;
+    }
+
+    function drawBoxes(detections, width, height) {
+        const overlayRect = overlay.getBoundingClientRect(),
+              target = uploadedImage.hidden ? video : uploadedImage,
+              targetRect = target.getBoundingClientRect();
+        overlay.width = Math.round(overlayRect.width);
+        overlay.height = Math.round(overlayRect.height);
+        clearBoxes();
+        if (!detections || !detections.length) return;
+
+        const boxAspect = targetRect.width / targetRect.height,
+              imageAspect = width / height;
+        let contentWidth = targetRect.width,
+            contentHeight = targetRect.height,
+            contentX = targetRect.left - overlayRect.left,
+            contentY = targetRect.top - overlayRect.top;
+        if (imageAspect > boxAspect) {
+            contentHeight = contentWidth / imageAspect;
+            contentY += (targetRect.height - contentHeight) / 2;
+        } else {
+            contentWidth = contentHeight * imageAspect;
+            contentX += (targetRect.width - contentWidth) / 2;
+        }
+        const targetRight = contentX + contentWidth,
+              targetBottom = contentY + contentHeight,
+              scaleX = contentWidth / width,
+              scaleY = contentHeight / height;
+
+        overlayContext.lineWidth = 3;
+        overlayContext.font = "700 13px 'Plus Jakarta Sans', Inter, sans-serif";
+        detections.forEach((x, index) => {
+            if (!x.bbox_xyxy) return;
+            const [x1, y1, x2, y2] = x.bbox_xyxy;
+            const left = Math.max(contentX, Math.min(targetRight, contentX + x1 * scaleX)),
+                  top = Math.max(contentY, Math.min(targetBottom, contentY + y1 * scaleY)),
+                  right = Math.max(left, Math.min(targetRight, contentX + x2 * scaleX)),
+                  bottom = Math.max(top, Math.min(targetBottom, contentY + y2 * scaleY));
+            const text = `${index + 1}. ${formatDiseaseName(x.class_name)} ${(x.confidence * 100).toFixed(1)}%`;
+            overlayContext.strokeStyle = "#49c778";
+            overlayContext.strokeRect(left, top, right - left, bottom - top);
+            const textWidth = overlayContext.measureText(text).width + 18,
+                  labelHeight = 25,
+                  labelX = Math.min(Math.max(contentX, left), Math.max(contentX, targetRight - textWidth)),
+                  aboveY = top - labelHeight,
+                  labelY = aboveY >= contentY ? aboveY : Math.min(bottom, targetBottom - labelHeight);
+            overlayContext.fillStyle = "#49c778";
+            overlayContext.fillRect(labelX, labelY, textWidth, labelHeight);
+            overlayContext.fillStyle = "#092315";
+            overlayContext.fillText(text, labelX + 9, labelY + 17);
+        });
+    }
+
+    function updateLeafDbBanner(payload) {
+        if (payload.saved_to_database) {
+            dbStatusBanner.className = "db-banner saved";
+            dbStatusBanner.textContent = "✅ DAUN BERUBAH: " + payload.database_message;
+        } else {
+            dbStatusBanner.className = "db-banner skipped";
+            dbStatusBanner.textContent = "⏭️ DAUN TIDAK BERUBAH: " + (payload.database_message || "Gambar tidak dikirim ulang ke database TiDB Cloud.");
+        }
+        refreshDashboardState();
+    }
+
+    async function detectFrame() {
+        if (requestInFlight || !stream) return;
+        requestInFlight = true;
+        try {
+            if (video.readyState < 2 || !video.videoWidth) {
+                status.textContent = "Menunggu kamera siap...";
+                return;
+            }
+            const maxW = 640;
+            const scale = video.videoWidth > maxW ? (maxW / video.videoWidth) : 1;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(video.videoWidth * scale);
+            canvas.height = Math.round(video.videoHeight * scale);
+            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", .80));
+            if (!blob) throw new Error("Gambar kamera tidak dapat dibuat.");
+            const data = new FormData();
+            data.append("file", blob, "webcam.jpg");
+            const response = await fetch(API_BASE + "/leaf-image?model_id=" + encodeURIComponent(model.value) + "&threshold=" + getThreshold(), {
+                method: "POST",
+                body: data
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || "Deteksi gagal.");
+            drawBoxes(payload.detections, payload.image_width, payload.image_height);
+            updateLeafDbBanner(payload);
+
+            if (!payload.detections || !payload.detections.length) {
+                result.textContent = "Tidak ada deteksi di atas threshold.";
+                status.textContent = "Mencari objek daun...";
+            } else {
+                const primary = payload.primary_detection;
+                result.innerHTML = `<div class="detection"><span>Hasil utama: <strong>${escapeHtml(formatDiseaseName(primary.class_name))}</strong></span><span class="confidence">${(primary.confidence * 100).toFixed(1)}%</span></div>`
+                    + payload.detections.slice(1).map(x => `<div class="detection"><span>${escapeHtml(formatDiseaseName(x.class_name))}</span><span class="confidence">${(x.confidence * 100).toFixed(1)}%</span></div>`).join("");
+                status.textContent = `${payload.detections.length} objek daun terdeteksi.`;
+            }
+        } catch (e) {
+            status.textContent = e.message;
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    async function capturePhotoAndDetect() {
+        if (requestInFlight || !stream) return;
+        requestInFlight = true;
+        try {
+            if (video.readyState < 2 || !video.videoWidth) return;
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext("2d").drawImage(video, 0, 0);
+            const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", .92));
+            if (uploadObjectUrl) URL.revokeObjectURL(uploadObjectUrl);
+            uploadedImage.src = uploadObjectUrl = URL.createObjectURL(blob);
+            uploadedImage.hidden = false;
+            video.hidden = true;
+            overlay.hidden = false;
+            placeholder.hidden = true;
+            showCamera.hidden = false;
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+            video.pause();
+            video.srcObject = null;
+            predict.disabled = true;
+            camera.textContent = "🔄 Reset tampilan";
+            camera.onclick = resetPreview;
+
+            status.textContent = "Menganalisis kondisi daun...";
+            const data = new FormData();
+            data.append("file", blob, "capture.jpg");
+            const response = await fetch(API_BASE + "/leaf-image?model_id=" + encodeURIComponent(model.value) + "&threshold=" + getThreshold(), {
+                method: "POST",
+                body: data
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || "Deteksi gagal.");
+            updateLeafDbBanner(payload);
+
+            if (payload.classification) {
+                const c = payload.classification;
+                result.innerHTML = `<div class="detection"><span>Klasifikasi: <strong>${escapeHtml(formatDiseaseName(c.class_name))}</strong></span><span class="confidence">${(c.confidence * 100).toFixed(1)}%</span></div>`;
+                status.textContent = "Klasifikasi daun selesai.";
+            } else {
+                if (!uploadedImage.complete || !uploadedImage.naturalWidth) {
+                    await new Promise(r => { uploadedImage.onload = r; uploadedImage.onerror = r; });
+                }
+                drawBoxes(payload.detections, payload.image_width, payload.image_height);
+                if (!payload.detections || !payload.detections.length) {
+                    const pct = Math.round(parseFloat(getThreshold()) * 100) + "%";
+                    result.textContent = `Tidak ada objek/klasifikasi daun di atas threshold (${pct}).`;
+                    status.textContent = "Tidak ada objek terdeteksi di atas threshold.";
+                }
+            }
+        } catch (e) {
+            status.textContent = e.message;
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    function startDetection() {
+        if (detectionTimer) return;
+        predict.textContent = "⏸️ Hentikan deteksi langsung";
+        detectFrame();
+        detectionTimer = setInterval(detectFrame, 500);
+    }
+    function stopDetection() {
+        if (detectionTimer) {
+            clearInterval(detectionTimer);
+            detectionTimer = null;
+        }
+        predict.textContent = isLiveModel() ? "🔍 Mulai deteksi langsung" : "📸 Ambil foto & klasifikasi";
+        clearBoxes();
+    }
+
+    predict.onclick = () => isLiveModel() ? (detectionTimer ? stopDetection() : startDetection()) : capturePhotoAndDetect();
+
+    upload.addEventListener("change", () => {
+        const file = upload.files[0];
+        if (!file) return;
+        stopCameraForUpload();
+        if (uploadObjectUrl) URL.revokeObjectURL(uploadObjectUrl);
+        uploadedImage.src = uploadObjectUrl = URL.createObjectURL(file);
+        uploadedImage.hidden = false;
+        placeholder.hidden = true;
+        overlay.hidden = false;
+        showCamera.hidden = false;
+        clearBoxes();
+        status.textContent = "Gambar dipilih. Klik 'Upload & Analisis Daun' untuk mendeteksi.";
+    });
+
+    uploadPredict.onclick = async () => {
+        const file = upload.files[0];
+        if (!file) {
+            status.textContent = "Pilih file gambar daun terlebih dahulu.";
+            return;
+        }
+        stopCameraForUpload();
+        if (uploadObjectUrl) URL.revokeObjectURL(uploadObjectUrl);
+        uploadedImage.src = uploadObjectUrl = URL.createObjectURL(file);
+        uploadedImage.hidden = false;
+        placeholder.hidden = true;
+        overlay.hidden = false;
+        showCamera.hidden = false;
+        status.textContent = "Mengirim gambar ke API Gambar Daun Laravel...";
+
+        let uploadBlob = file;
+        let uploadName = file.name || "leaf.jpg";
+        if (file.size > 1500000) {
+            try {
+                if (!uploadedImage.complete || !uploadedImage.naturalWidth) {
+                    await new Promise(r => { uploadedImage.onload = r; uploadedImage.onerror = r; });
+                }
+                const natW = uploadedImage.naturalWidth || 1280;
+                const natH = uploadedImage.naturalHeight || 960;
+                const maxSide = 1280;
+                const ratio = Math.min(1, maxSide / Math.max(natW, natH));
+                const c = document.createElement("canvas");
+                c.width = Math.max(1, Math.round(natW * ratio));
+                c.height = Math.max(1, Math.round(natH * ratio));
+                c.getContext("2d").drawImage(uploadedImage, 0, 0, c.width, c.height);
+                const compressed = await new Promise(r => c.toBlob(r, "image/jpeg", 0.90));
+                if (compressed && compressed.size > 0) {
+                    uploadBlob = compressed;
+                    uploadName = uploadName.replace(/\.[^.]+$/, "") + ".jpg";
+                }
+            } catch (_) {}
+        }
+
+        const data = new FormData();
+        data.append("file", uploadBlob, uploadName);
+        try {
+            const response = await fetch(API_BASE + "/leaf-image?model_id=" + encodeURIComponent(model.value) + "&threshold=" + getThreshold(), {
+                method: "POST",
+                body: data
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || "Deteksi gagal.");
+            if (!uploadedImage.complete || !uploadedImage.naturalWidth) {
+                await new Promise(r => { uploadedImage.onload = r; uploadedImage.onerror = r; });
+            }
+            drawBoxes(payload.detections || [], payload.image_width, payload.image_height);
+            updateLeafDbBanner(payload);
+
+            if (payload.classification) {
+                const c = payload.classification;
+                result.innerHTML = `<div class="detection"><span>Hasil klasifikasi: <strong>${escapeHtml(formatDiseaseName(c.class_name))}</strong></span><span class="confidence">${(c.confidence * 100).toFixed(1)}%</span></div>`;
+                status.textContent = "Foto berhasil diklasifikasikan.";
+            } else if (!payload.detections || !payload.detections.length) {
+                result.textContent = "Upload: tidak ada deteksi daun di atas threshold.";
+                status.textContent = "Tidak ada objek terdeteksi.";
+            } else {
+                const primary = payload.primary_detection;
+                result.innerHTML = `<div class="detection"><span>Hasil utama: <strong>${escapeHtml(formatDiseaseName(primary.class_name))}</strong></span><span class="confidence">${(primary.confidence * 100).toFixed(1)}%</span></div>`
+                    + payload.detections.slice(1).map(x => `<div class="detection"><span>${escapeHtml(formatDiseaseName(x.class_name))}</span><span class="confidence">${(x.confidence * 100).toFixed(1)}%</span></div>`).join("");
+                status.textContent = `${payload.detections.length} objek daun terdeteksi.`;
+            }
+        } catch (e) {
+            status.textContent = e.message;
+        }
+    };
+
+    showCamera.onclick = async () => {
+        try { await startCamera(); } catch (e) { status.textContent = "Kamera tidak dapat diakses."; }
+    };
+
