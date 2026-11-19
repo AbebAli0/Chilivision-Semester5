@@ -699,3 +699,275 @@ void cekPerintahWeb() {
   int kode = pollHttp.GET();
   updateTimerRelay();
 
+  if (kode == 200) {
+    setStatusApi(true, kode);
+    String res = pollHttp.getString();
+
+    String thStr = ambilNilai(res, "auto_water_threshold");
+    int th = thStr.length() > 0 ? thStr.toInt() : 0;
+
+    String mode = ambilNilai(res, "pesticide_schedule_mode");
+    int intHrs = ambilNilai(res, "pesticide_interval_hours").toInt();
+    String label = ambilNilai(res, "pesticide_interval_label");
+    String nextSpray = ambilNilai(
+      res,
+      "pesticide_next_spray_formatted"
+    );
+    String targetDt = ambilNilai(res, "pesticide_target_datetime");
+
+    String leafCond = ambilNilai(res, "latest_leaf_condition");
+    float leafConf = ambilNilai(
+      res,
+      "latest_leaf_confidence"
+    ).toFloat();
+    String leafModel = ambilNilai(res, "latest_leaf_model");
+    bool leafDisease = (
+      ambilNilai(res, "latest_leaf_is_disease") == "true"
+    );
+    String leafRec = ambilNilai(res, "latest_leaf_recommendation");
+    String leafTime = ambilNilai(res, "latest_leaf_detected_at");
+    String leafEventKey = ambilNilai(res, "latest_leaf_event_key");
+
+    if (!configAwalSudahSync) {
+      configAwalSudahSync = true;
+      if (th >= 1 && th <= 95) {
+        autoWaterThreshold = th;
+      }
+      if (mode.length() > 0) pesticideScheduleMode = mode;
+      if (intHrs > 0) pesticideIntervalHours = intHrs;
+      if (label.length() > 0) pesticideIntervalLabel = label;
+      if (nextSpray.length() > 0) pesticideNextSpray = nextSpray;
+      pesticideTargetDatetime = targetDt;
+
+      if (leafCond.length() > 0) latestLeafCondition = leafCond;
+      latestLeafConfidence = leafConf;
+      if (leafModel.length() > 0) latestLeafModel = leafModel;
+      latestLeafIsDisease = leafDisease;
+      if (leafRec.length() > 0) latestLeafRecommendation = leafRec;
+      if (leafTime.length() > 0) latestLeafDetectedAt = leafTime;
+      latestLeafEventKey = leafEventKey;
+
+      Serial.println(
+        "\n[SYNC SERVER] Konfigurasi awal berhasil disinkronkan:"
+      );
+      Serial.printf(
+        "  - Batas Semprot Air Auto : < %d%%\n",
+        autoWaterThreshold
+      );
+      if (pesticideIntervalLabel.length() > 0) {
+        Serial.printf(
+          "  - Jadwal Pestisida       : %s (%d jam) | Next: %s\n",
+          pesticideIntervalLabel.c_str(),
+          pesticideIntervalHours,
+          pesticideNextSpray.c_str()
+        );
+      }
+      Serial.printf(
+        "  - Deteksi Daun Terakhir  : %s (%.1f%%)%s\n\n",
+        latestLeafCondition.c_str(),
+        latestLeafConfidence * 100.0f,
+        latestLeafIsDisease ? " [PENYAKIT TERDETEKSI!]" : ""
+      );
+    } else {
+      bool eventBaru = (
+        leafEventKey.length() > 0 &&
+        leafEventKey != latestLeafEventKey &&
+        leafEventKey != "none"
+      );
+      bool kondisiBaru = (
+        leafCond.length() > 0 &&
+        leafCond != latestLeafCondition
+      );
+
+      if (eventBaru || kondisiBaru) {
+        if (leafCond.length() > 0) latestLeafCondition = leafCond;
+        latestLeafConfidence = leafConf;
+        if (leafModel.length() > 0) latestLeafModel = leafModel;
+        latestLeafIsDisease = leafDisease;
+        if (leafRec.length() > 0) latestLeafRecommendation = leafRec;
+        if (leafTime.length() > 0) latestLeafDetectedAt = leafTime;
+        latestLeafEventKey = leafEventKey;
+
+        if (latestLeafIsDisease) {
+          Serial.println(
+            "\n>>> [PERINGATAN: PENYAKIT DAUN TERDETEKSI DI WEB!] <<<"
+          );
+        } else {
+          Serial.println(
+            "\n>>> [UPDATE DETEKSI DAUN WEBSITE] <<<"
+          );
+        }
+        Serial.printf(
+          "Kondisi / Penyakit : %s (%.1f%%)\n",
+          latestLeafCondition.c_str(),
+          latestLeafConfidence * 100.0f
+        );
+        const char* stTanaman = latestLeafIsDisease
+          ? "TERDETEKSI PENYAKIT (Perlu Penanganan)"
+          : "Daun Sehat / Normal";
+        Serial.printf("Status Tanaman     : %s\n", stTanaman);
+        Serial.printf(
+          "Model AI           : %s\n",
+          latestLeafModel.c_str()
+        );
+        Serial.printf(
+          "Waktu Deteksi      : %s\n",
+          latestLeafDetectedAt.c_str()
+        );
+        Serial.printf(
+          "Rekomendasi        : %s\n\n",
+          latestLeafRecommendation.c_str()
+        );
+      }
+
+      if (th >= 1 && th <= 95 && th != autoWaterThreshold) {
+        int thresholdLama = autoWaterThreshold;
+        autoWaterThreshold = th;
+        Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
+        Serial.printf(
+          "Batas siram air auto diubah: < %d%% (sebelumnya < %d%%)\n",
+          autoWaterThreshold,
+          thresholdLama
+        );
+        Serial.printf(
+          "Kondisi tanah saat ini (%d%%): %s\n\n",
+          kelembapanTanah,
+          kondisiTanah().c_str()
+        );
+      }
+
+      bool jadwalBerubah =
+        (mode.length() > 0 && mode != pesticideScheduleMode) ||
+        (intHrs > 0 && intHrs != pesticideIntervalHours) ||
+        (label.length() > 0 && label != pesticideIntervalLabel) ||
+        (targetDt != pesticideTargetDatetime) ||
+        (nextSpray.length() > 0 && nextSpray != pesticideNextSpray);
+
+      if (jadwalBerubah) {
+        String labelLama = pesticideIntervalLabel;
+        int jamLama = pesticideIntervalHours;
+        if (mode.length() > 0) pesticideScheduleMode = mode;
+        if (intHrs > 0) pesticideIntervalHours = intHrs;
+        if (label.length() > 0) pesticideIntervalLabel = label;
+        if (nextSpray.length() > 0) pesticideNextSpray = nextSpray;
+        pesticideTargetDatetime = targetDt;
+
+        Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
+        if (pesticideScheduleMode == "target_datetime") {
+          Serial.printf(
+            "Jadwal target khusus pestisida diubah: %s\n\n",
+            pesticideNextSpray.c_str()
+          );
+        } else {
+          const char* lblOld = labelLama.length() > 0
+            ? labelLama.c_str()
+            : "-";
+          Serial.printf(
+            "Jadwal rutin diubah: %s (%d jam) [lama: %s (%d jam)]\n",
+            pesticideIntervalLabel.c_str(),
+            pesticideIntervalHours,
+            lblOld,
+            jamLama
+          );
+          Serial.printf(
+            "Jadwal berikutnya: %s\n\n",
+            pesticideNextSpray.c_str()
+          );
+        }
+      }
+    }
+
+    if (ambilNilai(res, "spray_water") == "true") {
+      int d = ambilNilai(res, "water_duration_seconds").toInt();
+      nyalakanRelay(
+        1,
+        d > 0 ? d : 5,
+        "Web / Telegram / Chatbot"
+      );
+    }
+    if (ambilNilai(res, "spray_pesticide") == "true") {
+      int d = ambilNilai(res, "pesticide_duration_seconds").toInt();
+      nyalakanRelay(
+        2,
+        d > 0 ? d : 5,
+        "Web / Telegram / Chatbot"
+      );
+    }
+    pollHttp.end();
+  } else {
+    Serial.printf(
+      "[API] Poll /esp32/poll gagal (%d): %s\n",
+      kode,
+      artiKodeHttp(kode).c_str()
+    );
+    pollHttp.setReuse(false);
+    pollHttp.end();
+    pollSecureClient.stop();
+    if (kode < 0 || kode >= 500) {
+      setStatusApi(false, kode, false);
+    }
+  }
+}
+
+// ================= LOOP =================
+void loop() {
+  cekKoneksiWifiDanApi();
+  updateTimerRelay();
+
+  if (Serial.available()) {
+    char perintah = Serial.read();
+    if (perintah != '\n' && perintah != '\r') {
+      kontrolRelay(perintah);
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED &&
+      apiTerhubung &&
+      millis() - waktuPoll >= POLL_MS) {
+    waktuPoll = millis();
+    cekPerintahWeb();
+    updateTimerRelay();
+  }
+
+  if (millis() - waktuBaca >= 2000) {
+    waktuBaca = millis();
+    bacaSensor();
+    updateTimerRelay();
+
+    bool cooldownSelesai = (
+      waktuSiramAuto == 0 ||
+      millis() - waktuSiramAuto >= AUTO_WATER_COOLDOWN_MS
+    );
+    if (kelembapanTanah < autoWaterThreshold &&
+        !statusRelay1 &&
+        cooldownSelesai) {
+      waktuSiramAuto = millis();
+      nyalakanRelay(1, 5, "Otomatis (Tanah Kering)");
+      if (WiFi.status() == WL_CONNECTED && apiTerhubung) {
+        String notes =
+          "Penyiraman otomatis ESP32 (batas <" +
+          String(autoWaterThreshold) + "%)";
+        kirimPost(
+          "/spray/water/history",
+          "{\"trigger_mode\":\"auto\","
+          "\"triggered_by\":\"esp32\","
+          "\"duration_seconds\":5,"
+          "\"soil_moisture\":" + String(kelembapanTanah) +
+          ",\"notes\":\"" + notes + "\"}"
+        );
+      }
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED &&
+      apiTerhubung &&
+      millis() - waktuKirim >= (SENSOR_SEND_MS / 2)) {
+    waktuKirim = millis();
+    kirimSensor();
+  }
+
+  if (millis() - waktuLCD >= 3000) {
+    waktuLCD = millis();
+    tampilLCD();
+  }
+}
