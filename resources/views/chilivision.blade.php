@@ -2289,3 +2289,773 @@
         try { await startCamera(); } catch (e) { status.textContent = "Kamera tidak dapat diakses."; }
     };
 
+    // =========================================================================
+    // IOT, MANUAL SPRAY & CHATBOT LOGIC
+    // =========================================================================
+    let lastModelSyncVersion = null;
+
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function formatSimpleMarkdown(text) {
+        return escapeHtml(text)
+            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+            .replace(/`(.*?)`/g, "<code>$1</code>");
+    }
+
+    function applyModelSelectionOnWebsite(modelId) {
+        if (!modelId || !model) return;
+        const opt = Array.from(model.options).find(o => o.value === modelId && !o.disabled);
+        if (opt && model.value !== modelId) {
+            model.value = modelId;
+            userCustomThreshold = false;
+            updateMode(true);
+            status.textContent = `✅ Model aktif diganti ke ${opt.textContent} via Chatbot.`;
+        }
+    }
+
+    async function selectModelFromChat(modelId) {
+        applyModelSelectionOnWebsite(modelId);
+        await sendChatMessage("model " + modelId);
+    }
+
+    async function refreshDashboardState() {
+        try {
+            const res = await fetch(API_BASE + "/dashboard/state");
+            const data = await res.json();
+            if (data.status !== "success") return;
+
+            // 1. Update Leaf KPI & Box
+            const leaf = data.leaf_detection.latest;
+            document.getElementById("kpiLeafCount").textContent = `${data.leaf_detection.total_saved} di DB`;
+            if (leaf) {
+                const confPct = (leaf.confidence * 100).toFixed(1);
+                const leafDisplayName = formatDiseaseName(leaf.class_name);
+                document.getElementById("kpiLeafName").textContent = `${leafDisplayName} (${confPct}%)`;
+                document.getElementById("kpiLeafMeta").textContent = `Model: ${leaf.model_id}`;
+                const thumb = document.getElementById("latestLeafThumb");
+                if (leaf.image_url) {
+                    thumb.src = leaf.image_url;
+                    thumb.hidden = false;
+                }
+                document.getElementById("latestLeafInfo").innerHTML =
+                    `<strong>${escapeHtml(leafDisplayName)}</strong> (${confPct}%)<br>` +
+                    `Model: <code>${escapeHtml(leaf.model_id)}</code><br>` +
+                    `<span style="color:var(--text-muted);">${escapeHtml(leaf.recommendation || '')}</span>`;
+            }
+
+            // 2. Update Soil Moisture
+            const soil = data.soil_moisture;
+            if (soil) {
+                document.getElementById("kpiSoilVal").textContent = `${soil.moisture_percent}%`;
+                document.getElementById("kpiSoilStatus").textContent = soil.status;
+                document.getElementById("kpiSoilMeta").textContent = soil.recommendation;
+                document.getElementById("soilDetailBox").innerHTML =
+                    `Kelembapan: <strong>${soil.moisture_percent}%</strong> (ADC: ${soil.adc_value ?? '-'})<br>` +
+                    `Status: <strong>${soil.status}</strong> · Sumber: <code>${soil.source}</code><br>` +
+                    `Pipeline: <strong>Web ✓ → Chatbot ✓ → Database ✓</strong>`;
+            }
+
+            // 3. Update DHT11
+            const dht = data.dht11;
+            if (dht) {
+                document.getElementById("kpiDhtVal").textContent = `${dht.temperature}°C / ${dht.humidity}%`;
+                document.getElementById("kpiDhtStatus").textContent = dht.status;
+                document.getElementById("kpiDhtMeta").textContent = dht.recommendation;
+                document.getElementById("dhtDetailBox").innerHTML =
+                    `Suhu: <strong>${dht.temperature}°C</strong> · Kelembapan Udara: <strong>${dht.humidity}%</strong><br>` +
+                    `Heat Index: <strong>${dht.heat_index}°C</strong> · Status: <strong>${dht.status}</strong><br>` +
+                    `Pipeline: <strong>Web ✓ → Chatbot ✓ → Database ✓</strong>`;
+            }
+
+            // 4. Update Spray History (Water & Pesticide)
+            const lastWater = data.spray_history.last_water_spray;
+            const lastPest = data.spray_history.last_pesticide_spray;
+
+            if (lastWater) {
+                document.getElementById("kpiLastWater").textContent = `${lastWater.sprayed_at_formatted} (${lastWater.time_ago})`;
+                document.getElementById("waterHistoryBox").innerHTML =
+                    `Waktu Terakhir: <strong>${lastWater.sprayed_at_formatted}</strong> (${lastWater.time_ago})<br>` +
+                    `Dipicu oleh: <code>${lastWater.triggered_by}</code> (${lastWater.trigger_mode}) · Durasi: <strong>${lastWater.duration_seconds}s</strong>`;
+            }
+
+            const waterThreshold = Number(data.auto_water_threshold) || 30;
+            currentAutoWaterThreshold = waterThreshold;
+
+            const sched = data.spray_history.pesticide_schedule_2_days;
+            if (sched) {
+                const label = sched.interval_label || "5 Hari Sekali";
+                const hours = sched.interval_hours || 120;
+                const headingEl = document.getElementById("pesticideScheduleHeading");
+                const policyEl = document.getElementById("pesticidePolicyNote");
+                if (headingEl) {
+                    headingEl.textContent = `🧪 Histori & Jadwal Pestisida (Tiap ${label})`;
+                }
+                if (policyEl) {
+                    policyEl.innerHTML = `ℹ️ Kebijakan Pestisida &amp; Air: Saat penyakit daun terdeteksi, bot mengirim <strong>Notifikasi Konfirmasi di Telegram</strong>. Penyemprotan otomatis pestisida berjalan <strong>Tiap ${escapeHtml(label)} (${hours} Jam)</strong>, sedangkan <strong>Air otomatis menyemprot saat Tanah Kering (&lt;${waterThreshold}%)</strong>.`;
+                }
+            }
+
+            if (lastPest) {
+                const label = sched?.interval_label || "5 Hari Sekali";
+                const nextStr = sched ? `<br>🗓️ Jadwal Berikutnya (${escapeHtml(label)}): <strong>${sched.next_spray_formatted}</strong> (${sched.time_until_next})` : '';
+                document.getElementById("kpiLastPesticide").textContent = `${lastPest.sprayed_at_formatted} (${lastPest.time_ago})`;
+                document.getElementById("pesticideHistoryBox").innerHTML =
+                    `Waktu Terakhir: <strong>${lastPest.sprayed_at_formatted}</strong> (${lastPest.time_ago})<br>` +
+                    `Dipicu oleh: <code>${lastPest.triggered_by}</code> (${lastPest.trigger_mode}) · Durasi: <strong>${lastPest.duration_seconds}s</strong>` +
+                    nextStr;
+            } else if (sched) {
+                const label = sched.interval_label || "5 Hari Sekali";
+                document.getElementById("pesticideHistoryBox").innerHTML =
+                    `Belum pernah disemprot.<br>🗓️ Jadwal Berikutnya (${escapeHtml(label)}): <strong>${sched.next_spray_formatted}</strong> (${sched.time_until_next})`;
+            }
+
+            // 5. Render Chatbot Messages (identik dengan kondisi & tombol inline di Telegram Bot)
+            if (typeof data.selected_model_version === "number") {
+                if (lastModelSyncVersion === null) {
+                    lastModelSyncVersion = data.selected_model_version;
+                } else if (data.selected_model_version !== lastModelSyncVersion) {
+                    lastModelSyncVersion = data.selected_model_version;
+                    applyModelSelectionOnWebsite(data.selected_model_id);
+                }
+            }
+
+            const chatContainer = document.getElementById("chatMessages");
+            if (data.chatbot_messages && data.chatbot_messages.length) {
+                const html = data.chatbot_messages.map(m => {
+                    const cls = m.sender === "user" ? "user" : "bot";
+                    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                    let inlineButtons = '';
+                    const meta = m.metadata_json || {};
+                    const photoHtml = meta.image_url
+                        ? `<img src="${escapeHtml(meta.image_url)}" alt="Foto daun" class="chat-photo-preview" onclick="window.open('${escapeHtml(meta.image_url)}', '_blank')">`
+                        : '';
+                    if (m.intent === "ask_pesticide_confirmation" && !meta.confirmation_handled) {
+                        inlineButtons = `
+                            <div class="chat-inline-actions">
+                                <button type="button" class="chat-inline-btn confirm-yes" onclick="sendQuickCommand('ya')">✅ Ya, Semprot Pestisida (5s)</button>
+                                <button type="button" class="chat-inline-btn confirm-no" onclick="sendQuickCommand('tidak')">❌ Tidak, Jangan Semprot</button>
+                            </div>
+                        `;
+                    } else if (m.intent === "select_model_menu" && Array.isArray(meta.models)) {
+                        const btns = meta.models.filter(opt => opt.available).map(opt => {
+                            const isActive = opt.id === model.value;
+                            return `<button type="button" class="chat-inline-btn model-option ${isActive ? 'active' : ''}" onclick="selectModelFromChat('${escapeHtml(opt.id)}')">${isActive ? '✅ ' : '🧠 '}${escapeHtml(opt.name)}</button>`;
+                        }).join("");
+                        if (btns) {
+                            inlineButtons = `<div class="chat-inline-actions">${btns}</div>`;
+                        }
+                    }
+                    return `<div class="chat-bubble ${cls}">${formatSimpleMarkdown(m.message)}${photoHtml}${inlineButtons}<span class="chat-time">${time}</span></div>`;
+                }).join("");
+                const shouldScroll = (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight) < 120;
+                chatContainer.innerHTML = html;
+                if (shouldScroll) chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // 6. Render Monitoring Hardware ESP32, Status Layanan & Visualisasi Data
+            renderEsp32Status(data.esp32_status);
+            renderSystemServicesStatus(data.system_services);
+            renderDashboardAnalytics(data.analytics);
+        } catch (err) {
+            console.error("Failed refreshing dashboard state:", err);
+        }
+    }
+
+    function renderSystemServicesStatus(svc) {
+        const el = document.getElementById("systemServicesSummary");
+        if (!el || !svc) return;
+        const infLabel = svc.inference_engine?.fastapi_online
+            ? "FastAPI Warm (Port 8001)"
+            : "Python CLI Fallback";
+        const geminiLabel = svc.gemini_ai?.enabled
+            ? `Aktif (${escapeHtml(svc.gemini_ai.model || "gemini")})`
+            : "Nonaktif (Mode Lokal)";
+        const tgLabel = svc.telegram_bot?.configured
+            ? (svc.telegram_bot.unreachable ? "Terkonfigurasi (Sementara Timeout)" : "Terkonfigurasi")
+            : "Belum Diatur";
+        el.innerHTML =
+            `Layanan Sistem: ⚡ Inference <strong>${infLabel}</strong> · 🧠 Gemini <strong>${geminiLabel}</strong> · 🤖 Telegram <strong>${tgLabel}</strong>`;
+    }
+
+    function renderEsp32Status(esp) {
+        if (!esp) return;
+        const pillClass = esp.state === "online" ? "online" : (esp.state === "warning" ? "warning" : (esp.state === "offline" ? "offline" : ""));
+        const navBadge = document.getElementById("navEsp32Badge");
+        const cardPill = document.getElementById("esp32StatusPill");
+        const cardText = document.getElementById("esp32StatusText");
+        const detail = document.getElementById("esp32HardwareDetail");
+
+        if (navBadge) {
+            navBadge.className = `esp32-pill ${pillClass}`.trim();
+            navBadge.innerHTML = `<span class="esp32-dot"></span><span>ESP32: ${escapeHtml(esp.label || "Menunggu")}</span>`;
+        }
+        if (cardPill && cardText) {
+            cardPill.className = `esp32-pill ${pillClass}`.trim();
+            cardText.textContent = esp.label || "Menunggu";
+        }
+        if (detail) {
+            const act = esp.last_activity ? ` · Aktivitas: <code>${escapeHtml(esp.last_activity)}</code>` : "";
+            detail.innerHTML =
+                `Sinyal Terakhir: <strong>${escapeHtml(esp.last_seen_formatted || "Belum pernah")}</strong> (${escapeHtml(esp.last_seen_ago || "-")})${act}<br>` +
+                `Antrean Pompa ESP32: 💧 Air <strong>${esp.pending_water_count ?? 0}</strong> · 🧪 Pestisida <strong>${esp.pending_pesticide_count ?? 0}</strong>`;
+        }
+    }
+
+    const CHART_GEOM = { w: 460, h: 195, padL: 36, padR: 14, padT: 16, padB: 28 };
+    const interactiveCharts = {
+        soil: { series: [], hoverIdx: null, pinnedIdx: null, bound: false, xFor: null, renderTooltip: null, renderReadout: null, dotSelectors: [] },
+        dht:  { series: [], hoverIdx: null, pinnedIdx: null, bound: false, xFor: null, renderTooltip: null, renderReadout: null, dotSelectors: [] },
+    };
+
+    function getChartPlotMetrics() {
+        const plotW = CHART_GEOM.w - CHART_GEOM.padL - CHART_GEOM.padR;
+        const plotH = CHART_GEOM.h - CHART_GEOM.padT - CHART_GEOM.padB;
+        const yFor = (val) => CHART_GEOM.padT + plotH - (Math.max(0, Math.min(100, Number(val) || 0)) / 100) * plotH;
+        const xFor = (idx, total) => total <= 1 ? CHART_GEOM.padL + plotW / 2 : CHART_GEOM.padL + (idx / (total - 1)) * plotW;
+        return { plotW, plotH, yFor, xFor };
+    }
+
+    function buildChartGridAndAxes(series, suffix = '') {
+        const { plotW, plotH, yFor, xFor } = getChartPlotMetrics();
+        const ticks = [0, 25, 50, 75, 100];
+        const gridLines = ticks.map(v => {
+            const y = yFor(v).toFixed(1);
+            const stroke = v === 0 ? '#cbd5e1' : 'rgba(148, 163, 184, 0.25)';
+            return `<line x1="${CHART_GEOM.padL}" y1="${y}" x2="${CHART_GEOM.w - CHART_GEOM.padR}" y2="${y}" stroke="${stroke}" stroke-width="1"/>` +
+                   `<text x="${CHART_GEOM.padL - 5}" y="${Number(y) + 3}" text-anchor="end" fill="#64748b" font-size="9.5">${v}${suffix}</text>`;
+        }).join('');
+
+        const firstTime = series[0]?.time ? `${escapeHtml(series[0].time)}` : '';
+        const midTime = series.length > 2 ? escapeHtml(series[Math.floor((series.length - 1) / 2)].time || '') : '';
+        const lastTime = series[series.length - 1]?.time ? `${escapeHtml(series[series.length - 1].time)}` : '';
+        const axisY = CHART_GEOM.padT + plotH + 15;
+        const timeLabels = series.length === 1
+            ? `<text x="${xFor(0, 1).toFixed(1)}" y="${axisY}" text-anchor="middle" fill="#64748b" font-size="9.5">${firstTime}</text>`
+            : `<text x="${CHART_GEOM.padL}" y="${axisY}" text-anchor="start" fill="#64748b" font-size="9.5">${firstTime}</text>` +
+              (midTime ? `<text x="${(CHART_GEOM.padL + plotW / 2).toFixed(1)}" y="${axisY}" text-anchor="middle" fill="#64748b" font-size="9.5">${midTime}</text>` : '') +
+              `<text x="${CHART_GEOM.w - CHART_GEOM.padR}" y="${axisY}" text-anchor="end" fill="#64748b" font-size="9.5">${lastTime}</text>`;
+
+        return `<line x1="${CHART_GEOM.padL}" y1="${CHART_GEOM.padT}" x2="${CHART_GEOM.padL}" y2="${CHART_GEOM.padT + plotH}" stroke="#cbd5e1" stroke-width="1"/>` +
+               gridLines + timeLabels;
+    }
+
+    function updateChartActiveState(key) {
+        const state = interactiveCharts[key];
+        const wrap = document.getElementById(key + 'ChartWrap');
+        const svg = document.getElementById(key + 'ChartSvg');
+        const tooltip = document.getElementById(key + 'ChartTooltip');
+        const readout = document.getElementById(key + 'ChartReadout');
+        if (!wrap || !svg || !tooltip || !readout) return;
+
+        const total = state.series.length;
+        const activeIdx = state.hoverIdx !== null ? state.hoverIdx : state.pinnedIdx;
+        const isPinned = state.pinnedIdx !== null && activeIdx === state.pinnedIdx;
+
+        svg.querySelectorAll('.chart-dot').forEach(dot => {
+            const idx = Number(dot.getAttribute('data-idx'));
+            const baseR = Number(dot.getAttribute('data-base-r') || '3.5');
+            if (activeIdx !== null && idx === activeIdx) {
+                dot.setAttribute('r', String(baseR + 2.4));
+                dot.setAttribute('stroke-width', '2.4');
+            } else {
+                dot.setAttribute('r', String(baseR));
+                dot.setAttribute('stroke-width', '1.4');
+            }
+        });
+
+        const crosshair = svg.querySelector('.chart-crosshair');
+        const rings = svg.querySelectorAll('.chart-active-ring');
+
+        if (activeIdx === null || activeIdx < 0 || activeIdx >= total) {
+            if (crosshair) crosshair.setAttribute('opacity', '0');
+            rings.forEach(r => r.setAttribute('opacity', '0'));
+            tooltip.hidden = true;
+            readout.innerHTML = total
+                ? 'Arahkan kursor / ketuk titik grafik untuk cek nilai per waktu · Klik untuk kunci.'
+                : 'Belum ada data titik grafik.';
+            return;
+        }
+
+        const pt = state.series[activeIdx];
+        const { xFor, yFor } = getChartPlotMetrics();
+        const svgX = xFor(activeIdx, total);
+        if (crosshair) {
+            crosshair.setAttribute('x1', svgX.toFixed(1));
+            crosshair.setAttribute('x2', svgX.toFixed(1));
+            crosshair.setAttribute('opacity', '1');
+        }
+        rings.forEach(ring => {
+            const field = ring.getAttribute('data-field');
+            const val = pt[field];
+            if (val !== undefined && val !== null) {
+                ring.setAttribute('cx', svgX.toFixed(1));
+                ring.setAttribute('cy', yFor(val).toFixed(1));
+                ring.setAttribute('opacity', '1');
+            }
+        });
+
+        tooltip.innerHTML = state.renderTooltip(pt, activeIdx, total, isPinned);
+        tooltip.hidden = false;
+
+        // Position tooltip cleanly inside wrap bounds without clipping edges
+        const wrapW = wrap.clientWidth || 360;
+        const wrapH = wrap.clientHeight || 195;
+        const pxX = (svgX / CHART_GEOM.w) * wrapW;
+        const ttW = tooltip.offsetWidth || 185;
+        const ttH = tooltip.offsetHeight || 82;
+        const placeLeft = pxX > wrapW * 0.56;
+        const left = placeLeft
+            ? Math.max(6, pxX - ttW - 12)
+            : Math.min(wrapW - ttW - 6, pxX + 12);
+        const top = Math.max(6, Math.min(wrapH - ttH - 6, 12));
+        tooltip.style.left = `${Math.round(left)}px`;
+        tooltip.style.top = `${Math.round(top)}px`;
+
+        readout.innerHTML = state.renderReadout(pt, activeIdx, total, isPinned);
+    }
+
+    function resolveNearestChartIndex(key, clientX) {
+        const state = interactiveCharts[key];
+        const svg = document.getElementById(key + 'ChartSvg');
+        if (!svg || !state.series.length) return null;
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width) return null;
+        const svgX = ((clientX - rect.left) / rect.width) * CHART_GEOM.w;
+        const { xFor } = getChartPlotMetrics();
+        let bestIdx = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < state.series.length; i++) {
+            const dist = Math.abs(svgX - xFor(i, state.series.length));
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
+            }
+        }
+        return bestIdx;
+    }
+
+    function bindInteractiveChartEvents(key) {
+        const state = interactiveCharts[key];
+        if (state.bound) return;
+        state.bound = true;
+
+        const wrap = document.getElementById(key + 'ChartWrap');
+        const tooltip = document.getElementById(key + 'ChartTooltip');
+        if (!wrap) return;
+
+        wrap.addEventListener('pointermove', (e) => {
+            if (!state.series.length) return;
+            if (tooltip && tooltip.contains(e.target)) return;
+            const idx = resolveNearestChartIndex(key, e.clientX);
+            if (idx !== null && idx !== state.hoverIdx) {
+                state.hoverIdx = idx;
+                updateChartActiveState(key);
+            }
+        });
+
+        wrap.addEventListener('pointerleave', () => {
+            state.hoverIdx = null;
+            updateChartActiveState(key);
+        });
+
+        wrap.addEventListener('click', (e) => {
+            if (!state.series.length) return;
+            if (tooltip && tooltip.contains(e.target)) return;
+            const idx = resolveNearestChartIndex(key, e.clientX);
+            if (idx === null) return;
+            state.pinnedIdx = (state.pinnedIdx === idx) ? null : idx;
+            state.hoverIdx = state.pinnedIdx;
+            updateChartActiveState(key);
+        });
+
+        wrap.addEventListener('keydown', (e) => {
+            if (!state.series.length) return;
+            const total = state.series.length;
+            const current = state.pinnedIdx ?? state.hoverIdx ?? (total - 1);
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                state.pinnedIdx = Math.max(0, current - 1);
+                state.hoverIdx = state.pinnedIdx;
+                updateChartActiveState(key);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                state.pinnedIdx = Math.min(total - 1, current + 1);
+                state.hoverIdx = state.pinnedIdx;
+                updateChartActiveState(key);
+            } else if (e.key === 'Home') {
+                e.preventDefault();
+                state.pinnedIdx = 0;
+                state.hoverIdx = 0;
+                updateChartActiveState(key);
+            } else if (e.key === 'End') {
+                e.preventDefault();
+                state.pinnedIdx = total - 1;
+                state.hoverIdx = total - 1;
+                updateChartActiveState(key);
+            } else if (e.key === 'Escape') {
+                state.pinnedIdx = null;
+                state.hoverIdx = null;
+                updateChartActiveState(key);
+            }
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        const stepBtn = e.target.closest('[data-chart-step]');
+        if (stepBtn) {
+            const [key, deltaStr] = stepBtn.getAttribute('data-chart-step').split(':');
+            const state = interactiveCharts[key];
+            if (!state || !state.series.length) return;
+            const total = state.series.length;
+            const current = state.pinnedIdx ?? state.hoverIdx ?? (total - 1);
+            const next = Math.max(0, Math.min(total - 1, current + Number(deltaStr)));
+            state.pinnedIdx = next;
+            state.hoverIdx = next;
+            updateChartActiveState(key);
+            return;
+        }
+        const resetBtn = e.target.closest('[data-chart-reset]');
+        if (resetBtn) {
+            const key = resetBtn.getAttribute('data-chart-reset');
+            const state = interactiveCharts[key];
+            if (!state) return;
+            state.pinnedIdx = null;
+            state.hoverIdx = null;
+            updateChartActiveState(key);
+        }
+    });
+
+    let currentAutoWaterThreshold = 30;
+
+    function renderSoilChart(series) {
+        const svg = document.getElementById("soilChartSvg");
+        const legend = document.getElementById("soilChartLegend");
+        if (!svg || !legend) return;
+        const state = interactiveCharts.soil;
+        state.series = Array.isArray(series) ? series : [];
+
+        if (state.series.length === 0) {
+            state.hoverIdx = null;
+            state.pinnedIdx = null;
+            svg.innerHTML = `<text x="230" y="100" text-anchor="middle" fill="#64748b" font-size="13">Belum ada data Soil Moisture untuk grafik.</text>`;
+            legend.textContent = "Kirim data sensor atau gunakan form uji di atas.";
+            updateChartActiveState('soil');
+            return;
+        }
+
+        if (state.pinnedIdx !== null && state.pinnedIdx >= state.series.length) {
+            state.pinnedIdx = state.series.length - 1;
+        }
+        if (state.hoverIdx !== null && state.hoverIdx >= state.series.length) {
+            state.hoverIdx = state.series.length - 1;
+        }
+
+        const { plotH, yFor, xFor } = getChartPlotMetrics();
+        const total = state.series.length;
+        const thresholdY = yFor(currentAutoWaterThreshold).toFixed(1);
+        const points = state.series.map((pt, i) => `${xFor(i, total).toFixed(1)},${yFor(pt.value).toFixed(1)}`).join(" ");
+        const areaPoints = `${xFor(0, total).toFixed(1)},${(CHART_GEOM.padT + plotH).toFixed(1)} ${points} ${xFor(total - 1, total).toFixed(1)},${(CHART_GEOM.padT + plotH).toFixed(1)}`;
+        const dots = state.series.map((pt, i) =>
+            `<circle class="chart-dot" data-idx="${i}" data-base-r="3.8" cx="${xFor(i, total).toFixed(1)}" cy="${yFor(pt.value).toFixed(1)}" r="3.8" fill="#059669" stroke="#ffffff" stroke-width="1.4"/>`
+        ).join("");
+
+        svg.innerHTML =
+            buildChartGridAndAxes(state.series, '%') +
+            `<line x1="${CHART_GEOM.padL}" y1="${thresholdY}" x2="${CHART_GEOM.w - CHART_GEOM.padR}" y2="${thresholdY}" stroke="#ef4444" stroke-dasharray="4 4" stroke-width="1.3"/>` +
+            `<text x="${CHART_GEOM.w - CHART_GEOM.padR}" y="${Number(thresholdY) - 4}" text-anchor="end" fill="#ef4444" font-size="9.5" font-weight="700">Batas Kering ${currentAutoWaterThreshold}%</text>` +
+            `<polygon points="${areaPoints}" fill="rgba(16, 185, 129, 0.16)"/>` +
+            `<polyline fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" points="${points}"/>` +
+            `<line class="chart-crosshair" x1="0" y1="${CHART_GEOM.padT}" x2="0" y2="${CHART_GEOM.padT + plotH}" stroke="#64748b" stroke-dasharray="3 3" stroke-width="1.2" opacity="0"/>` +
+            `<circle class="chart-active-ring" data-field="value" cx="0" cy="0" r="8.5" fill="rgba(16, 185, 129, 0.22)" stroke="#10b981" stroke-width="1.5" opacity="0"/>` +
+            dots;
+
+        state.renderTooltip = (pt, idx, len, pinned) => {
+            const adcLine = pt.adc_value !== null && pt.adc_value !== undefined ? `ADC: <strong>${pt.adc_value}</strong>` : '';
+            const srcLine = pt.source ? `Sumber: <code>${escapeHtml(pt.source)}</code>` : '';
+            const meta = [adcLine, srcLine].filter(Boolean).join(' · ');
+            return `
+                <div class="chart-tooltip-head">
+                    <span>#${idx + 1}/${len} · ${escapeHtml(pt.full_time || (pt.time + ' WIB'))}</span>
+                    ${pinned ? '<span class="chart-tooltip-pin">📌 Dikunci</span>' : ''}
+                </div>
+                <div class="chart-tooltip-row"><span>💧 Kelembapan</span><strong>${pt.value}%</strong></div>
+                <div class="chart-tooltip-row"><span>📌 Status</span><strong>${escapeHtml(pt.status || '-')}</strong></div>
+                ${meta ? `<div class="chart-tooltip-meta">${meta}</div>` : ''}
+            `;
+        };
+        state.renderReadout = (pt, idx, len, pinned) =>
+            `${pinned ? '📌 ' : ''}Titik <strong>#${idx + 1}/${len}</strong> (${escapeHtml(pt.time)} WIB): <strong>${pt.value}%</strong> (${escapeHtml(pt.status || '-')})`;
+
+        bindInteractiveChartEvents('soil');
+        updateChartActiveState('soil');
+
+        const latest = state.series[total - 1];
+        const minVal = Math.min(...state.series.map(s => s.value)).toFixed(1);
+        const maxVal = Math.max(...state.series.map(s => s.value)).toFixed(1);
+        legend.innerHTML = `<span>🟢 Terbaru: <strong>${latest.value}%</strong> (${escapeHtml(latest.time)})</span><span>Min: ${minVal}% · Maks: ${maxVal}%</span>`;
+    }
+
+    function renderDhtChart(series) {
+        const svg = document.getElementById("dhtChartSvg");
+        const legend = document.getElementById("dhtChartLegend");
+        if (!svg || !legend) return;
+        const state = interactiveCharts.dht;
+        state.series = Array.isArray(series) ? series : [];
+
+        if (state.series.length === 0) {
+            state.hoverIdx = null;
+            state.pinnedIdx = null;
+            svg.innerHTML = `<text x="230" y="100" text-anchor="middle" fill="#64748b" font-size="13">Belum ada data DHT22 untuk grafik.</text>`;
+            legend.textContent = "Kirim data suhu & kelembapan udara untuk melihat grafik.";
+            updateChartActiveState('dht');
+            return;
+        }
+
+        if (state.pinnedIdx !== null && state.pinnedIdx >= state.series.length) {
+            state.pinnedIdx = state.series.length - 1;
+        }
+        if (state.hoverIdx !== null && state.hoverIdx >= state.series.length) {
+            state.hoverIdx = state.series.length - 1;
+        }
+
+        const { plotH, yFor, xFor } = getChartPlotMetrics();
+        const total = state.series.length;
+        const tempPts = state.series.map((pt, i) => `${xFor(i, total).toFixed(1)},${yFor(pt.temperature).toFixed(1)}`).join(" ");
+        const humPts = state.series.map((pt, i) => `${xFor(i, total).toFixed(1)},${yFor(pt.humidity).toFixed(1)}`).join(" ");
+        const tempDots = state.series.map((pt, i) =>
+            `<circle class="chart-dot" data-idx="${i}" data-base-r="3.6" cx="${xFor(i, total).toFixed(1)}" cy="${yFor(pt.temperature).toFixed(1)}" r="3.6" fill="#ea580c" stroke="#ffffff" stroke-width="1.4"/>`
+        ).join("");
+        const humDots = state.series.map((pt, i) =>
+            `<circle class="chart-dot" data-idx="${i}" data-base-r="3.6" cx="${xFor(i, total).toFixed(1)}" cy="${yFor(pt.humidity).toFixed(1)}" r="3.6" fill="#2563eb" stroke="#ffffff" stroke-width="1.4"/>`
+        ).join("");
+
+        svg.innerHTML =
+            buildChartGridAndAxes(state.series) +
+            `<polyline fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${humPts}"/>` +
+            `<polyline fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${tempPts}"/>` +
+            `<line class="chart-crosshair" x1="0" y1="${CHART_GEOM.padT}" x2="0" y2="${CHART_GEOM.padT + plotH}" stroke="#64748b" stroke-dasharray="3 3" stroke-width="1.2" opacity="0"/>` +
+            `<circle class="chart-active-ring" data-field="humidity" cx="0" cy="0" r="8" fill="rgba(37, 99, 235, 0.20)" stroke="#2563eb" stroke-width="1.4" opacity="0"/>` +
+            `<circle class="chart-active-ring" data-field="temperature" cx="0" cy="0" r="8" fill="rgba(234, 88, 12, 0.20)" stroke="#ea580c" stroke-width="1.4" opacity="0"/>` +
+            humDots + tempDots;
+
+        state.renderTooltip = (pt, idx, len, pinned) => {
+            const hiLine = pt.heat_index !== null && pt.heat_index !== undefined ? `Heat Index: <strong>${pt.heat_index}°C</strong>` : '';
+            const statusLine = pt.status ? `Status: <strong>${escapeHtml(pt.status)}</strong>` : '';
+            const meta = [hiLine, statusLine].filter(Boolean).join(' · ');
+            return `
+                <div class="chart-tooltip-head">
+                    <span>#${idx + 1}/${len} · ${escapeHtml(pt.full_time || (pt.time + ' WIB'))}</span>
+                    ${pinned ? '<span class="chart-tooltip-pin">📌 Dikunci</span>' : ''}
+                </div>
+                <div class="chart-tooltip-row"><span>🟠 Suhu Udara</span><strong>${pt.temperature}°C</strong></div>
+                <div class="chart-tooltip-row"><span>🔵 Kelembapan</span><strong>${pt.humidity}%</strong></div>
+                ${meta ? `<div class="chart-tooltip-meta">${meta}</div>` : ''}
+            `;
+        };
+        state.renderReadout = (pt, idx, len, pinned) =>
+            `${pinned ? '📌 ' : ''}Titik <strong>#${idx + 1}/${len}</strong> (${escapeHtml(pt.time)} WIB): <strong>${pt.temperature}°C</strong> · <strong>${pt.humidity}%</strong>`;
+
+        bindInteractiveChartEvents('dht');
+        updateChartActiveState('dht');
+
+        const latest = state.series[total - 1];
+        legend.innerHTML = `<span>🟠 Suhu Terbaru: <strong>${latest.temperature}°C</strong></span><span>🔵 Kelembapan Udara: <strong>${latest.humidity}%</strong></span>`;
+    }
+
+    function renderDashboardAnalytics(analytics) {
+        if (!analytics) return;
+        renderSoilChart(analytics.soil_series || []);
+        renderDhtChart(analytics.dht_series || []);
+
+        const sprayBadge = document.getElementById("sprayTotalsBadge");
+        if (sprayBadge && analytics.spray_summary) {
+            sprayBadge.textContent = `💧 ${analytics.spray_summary.water_total ?? 0} Air · 🧪 ${analytics.spray_summary.pesticide_total ?? 0} Pestisida`;
+        }
+
+        const listEl = document.getElementById("leafStatsList");
+        const leafSummary = analytics.leaf_summary || [];
+        if (listEl) {
+            if (!leafSummary.length) {
+                listEl.textContent = "Belum ada data deteksi daun tersimpan di database.";
+                return;
+            }
+            const totalAll = leafSummary.reduce((acc, item) => acc + (item.total || 0), 0) || 1;
+            listEl.innerHTML = leafSummary.map(item => {
+                const pct = Math.round((item.total / totalAll) * 100);
+                return `
+                    <div class="stat-bar-row">
+                        <div class="stat-bar-label">
+                            <span>🍃 ${escapeHtml(formatDiseaseName(item.class_name))}</span>
+                            <span>${item.total}x (${pct}%)</span>
+                        </div>
+                        <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%"></div></div>
+                    </div>
+                `;
+            }).join("");
+        }
+    }
+
+    async function triggerManualSprayFromWeb(type) {
+        const duration = parseInt(document.getElementById("sprayDuration").value || "5", 10);
+        const btn = type === "pesticide" ? document.getElementById("btnManualPesticide") : document.getElementById("btnManualWater");
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "⏳ Menyemprot...";
+
+        try {
+            const res = await fetch(API_BASE + "/spray/manual", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify({
+                    type: type,
+                    triggered_by: "web",
+                    duration_seconds: duration
+                })
+            });
+            await res.json();
+            await refreshDashboardState();
+            const chatContainer = document.getElementById("chatMessages");
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } finally {
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }, 600);
+        }
+    }
+
+    async function sendChatMessage(messageText) {
+        if (!messageText.trim()) return;
+        const input = document.getElementById("chatInput");
+        input.value = "";
+        try {
+            const res = await fetch(API_BASE + "/chatbot/message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify({ message: messageText, source: "web" })
+            });
+            if (!res.ok) {
+                console.error("Chatbot HTTP error:", res.status);
+                return;
+            }
+            const payload = await res.json();
+            if (payload?.bot_reply?.intent === "model_selected" && payload?.selected_model_id) {
+                applyModelSelectionOnWebsite(payload.selected_model_id);
+            }
+            await refreshDashboardState();
+            const chatContainer = document.getElementById("chatMessages");
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        } catch (err) {
+            console.error("Gagal mengirim pesan chatbot:", err);
+        }
+    }
+
+    function handleChatSubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById("chatInput");
+        sendChatMessage(input.value);
+    }
+
+    function sendQuickCommand(cmd) {
+        sendChatMessage(cmd);
+    }
+
+    async function submitSoilMoisture(e) {
+        e.preventDefault();
+        const val = parseFloat(document.getElementById("inputSoilMoisture").value);
+        await fetch(API_BASE + "/sensor/soil-moisture", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ moisture_percent: val, source: "web" })
+        });
+        await refreshDashboardState();
+        const chatContainer = document.getElementById("chatMessages");
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function submitDht11(e) {
+        e.preventDefault();
+        const temp = parseFloat(document.getElementById("inputDhtTemp").value);
+        const hum = parseFloat(document.getElementById("inputDhtHum").value);
+        await fetch(API_BASE + "/sensor/dht11", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({ temperature: temp, humidity: hum, source: "web" })
+        });
+        await refreshDashboardState();
+        const chatContainer = document.getElementById("chatMessages");
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Theme Toggle (Light / Dark Mode with Smooth View Transition & Cross-Tab Sync)
+    (function () {
+        const meta = document.querySelector('meta[name="color-scheme"]');
+        const toggleBtn = document.getElementById("themeToggleBtn");
+        const darkMql = window.matchMedia("(prefers-color-scheme: dark)");
+
+        function getSystemScheme() {
+            return darkMql.matches ? "dark" : "light";
+        }
+
+        function getCurrentRenderedScheme() {
+            try {
+                const stored = localStorage.getItem("color-scheme");
+                if (stored === "dark" || stored === "light") return stored;
+            } catch (e) {}
+            return getSystemScheme();
+        }
+
+        function applyScheme(target) {
+            const sys = getSystemScheme();
+            try {
+                if (target !== sys) {
+                    localStorage.setItem("color-scheme", target);
+                    meta.content = target;
+                } else {
+                    localStorage.removeItem("color-scheme");
+                    meta.content = "light dark";
+                }
+            } catch (e) {
+                meta.content = target;
+            }
+        }
+
+        if (toggleBtn && meta) {
+            toggleBtn.addEventListener("click", () => {
+                toggleBtn.classList.add("is-pressed");
+                setTimeout(() => toggleBtn.classList.remove("is-pressed"), 140);
+
+                const current = getCurrentRenderedScheme();
+                const target = current === "dark" ? "light" : "dark";
+                const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+                if (document.startViewTransition && !reducedMotion) {
+                    document.startViewTransition(() => {
+                        applyScheme(target);
+                    });
+                } else {
+                    document.documentElement.classList.add("theme-fallback-transition");
+                    applyScheme(target);
+                }
+            });
+
+            window.addEventListener("storage", (e) => {
+                if (e.key === "color-scheme") {
+                    meta.content = e.newValue ?? "light dark";
+                }
+            });
+        }
+    })();
+
+    // Initial load & periodic polling every 5 seconds
+    refreshDashboardState();
+    setInterval(refreshDashboardState, 5000);
+</script>
+</body>
+</html>
