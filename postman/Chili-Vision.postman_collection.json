@@ -1,0 +1,190 @@
+{
+  "info": {
+    "_postman_id": "c6f4a0f4-4eb9-4c11-8c4e-chili-vision",
+    "name": "ChiliVision Laravel + MySQL API",
+    "description": "Koleksi Endpoint REST API Laravel + MySQL untuk Computer Vision Daun Cabai, Sensor Soil Moisture & DHT11 (Web > Chatbot > Database), Histori Penyemprotan Air & Pestisida, serta Penyemprotan Manual (Tombol Web & Command Chatbot).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "image_path",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. API Gambar Daun - GET Deteksi Terakhir",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/leaf-image"
+      }
+    },
+    {
+      "name": "1b. API Gambar Daun - POST Deteksi (Skip DB Jika Daun Tidak Berubah)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "{{image_path}}"
+            }
+          ]
+        },
+        "url": "{{base_url}}/api/leaf-image?model_id=yolov8n-chili&threshold=0.25"
+      }
+    },
+    {
+      "name": "2a. API Sensor Soil Moisture - POST (Web > Chatbot > Database)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"moisture_percent\": 28.5,\n  \"adc_value\": 3250,\n  \"source\": \"esp32\"\n}"
+        },
+        "url": "{{base_url}}/api/sensor/soil-moisture"
+      }
+    },
+    {
+      "name": "2b. API Sensor Soil Moisture - GET Data Terakhir",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/sensor/soil-moisture"
+      }
+    },
+    {
+      "name": "3a. API Sensor DHT11 - POST (Web > Chatbot > Database)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature\": 30.8,\n  \"humidity\": 64.5,\n  \"source\": \"esp32\"\n}"
+        },
+        "url": "{{base_url}}/api/sensor/dht11"
+      }
+    },
+    {
+      "name": "3b. API Sensor DHT11 - GET Data Terakhir",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/sensor/dht11"
+      }
+    },
+    {
+      "name": "4a. API Histori Penyemprotan Terakhir Pestisida - GET",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/spray/pesticide/history"
+      }
+    },
+    {
+      "name": "4b. API Histori Penyemprotan Terakhir Pestisida - POST Simpan Waktu",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"triggered_by\": \"esp32\",\n  \"duration_seconds\": 5,\n  \"leaf_condition\": \"Penyakit Daun Keriting\",\n  \"notes\": \"Penyemprotan pestisida terjadwal\"\n}"
+        },
+        "url": "{{base_url}}/api/spray/pesticide/history"
+      }
+    },
+    {
+      "name": "5a. API Histori Penyemprotan Terakhir Air - GET",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/spray/water/history"
+      }
+    },
+    {
+      "name": "5b. API Histori Penyemprotan Terakhir Air - POST Simpan Waktu",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"triggered_by\": \"esp32\",\n  \"duration_seconds\": 5,\n  \"soil_moisture\": 28.5,\n  \"notes\": \"Penyiraman air otomatis\"\n}"
+        },
+        "url": "{{base_url}}/api/spray/water/history"
+      }
+    },
+    {
+      "name": "6a. API Penyemprotan Manual - Semprot Air (Tombol Web)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"water\",\n  \"triggered_by\": \"web\",\n  \"duration_seconds\": 5\n}"
+        },
+        "url": "{{base_url}}/api/spray/manual"
+      }
+    },
+    {
+      "name": "6b. API Penyemprotan Manual - Semprot Pestisida (Tombol Web)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"pesticide\",\n  \"triggered_by\": \"web\",\n  \"duration_seconds\": 5\n}"
+        },
+        "url": "{{base_url}}/api/spray/manual"
+      }
+    },
+    {
+      "name": "6c. API Chatbot Command - Semprot Air Manual via Chatbot",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"semprot air 5 detik\"\n}"
+        },
+        "url": "{{base_url}}/api/chatbot/message"
+      }
+    },
+    {
+      "name": "6d. API Chatbot Command - Semprot Pestisida Manual via Chatbot",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"semprot pestisida 5 detik\"\n}"
+        },
+        "url": "{{base_url}}/api/chatbot/message"
+      }
+    }
+  ]
+}

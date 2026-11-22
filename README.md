@@ -16,7 +16,8 @@
 | [**`frontend`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/frontend) | **Frontend Developer** | **Muhammad Fitrah Abdul Rahman Saleh** ([@mfitrah1502](https://github.com/mfitrah1502)) | Dashboard Monitoring ChiliVision, Live Kamera, Grafik Tren Sensor Soil Moisture & DHT22, & Halaman API Docs |
 | [**`training-model`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/training-model) | **Training Model / AI Engineer** | **Daffamanta Ardra Hidayat** ([@Daffamanta](https://github.com/Daffamanta)) | Preprocessing Dataset, Training & Evaluasi Model YOLOv8n & CNN 5-Channel (ONNX), serta FastAPI Inference Worker |
 | [**`iot`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/iot) | **IoT & Hardware Engineer** | **Mohammad Sabilillah** ([@sabilillah123](https://github.com/sabilillah123)) | Firmware ESP32, Pembacaan Sensor Soil Moisture & DHT22, Kontrol Relay Pompa Air & Pestisida, serta LCD I2C |
-| [**`main`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/main) | **Main (Integrasi Utama)** | **Seluruh Anggota Tim** | Gabungan (*Merge*) terintegrasi dari seluruh branch modul (`backend`, `frontend`, `training-model`, dan `iot`) |
+| [**`qa-testing`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/qa-testing) | **QA & Testing Engineer** | **Khairunnisa Nabilah** ([@Khairunnisanabilah50](https://github.com/Khairunnisanabilah50)) | Pengujian Otomatis PHPUnit (37 Feature & Unit Tests), Koleksi Uji API Postman, & Validasi QA Sistem |
+| [**`main`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/main) | **Main (Integrasi Utama)** | **Seluruh Anggota Tim** | Gabungan (*Merge*) terintegrasi dari seluruh branch modul (`backend`, `frontend`, `training-model`, `iot`, dan `qa-testing`) |
 
 ---
 
@@ -56,12 +57,13 @@ Project/
 │   ├── esp32_lama/              # Firmware ESP32 utama + secrets.example.h (secrets.h tidak di-commit)
 │   └── esp32_laravel_controller/# Referensi firmware ESP32 kontroler Laravel
 ├── models/                      # File model .onnx, .pt/.keras, dan *.names.json (Git LFS)
+├── postman/                     # Koleksi pengujian endpoint REST API Postman
 ├── public/models/               # Salinan aset model publik
 ├── resources/views/             # chilivision.blade.php & api-docs.blade.php
 ├── routes/                      # web.php, api.php, console.php
 ├── src/                         # fastapi_app.py, inference_cli.py, telegram_bot.py, train/eval/export scripts
 ├── storage/certs/               # CA certificate TiDB Cloud (tidak di-commit ke Git)
-├── tests/Feature/               # 32 PHPUnit feature tests (SQLite :memory:)
+├── tests/                       # 37 PHPUnit feature & unit tests (SQLite :memory:) + phpunit.xml
 ├── start_server.bat             # Launcher utama seluruh layanan (Windows)
 ├── stop_server.bat              # Menghentikan seluruh layanan background
 ├── start_telegram_bot.bat       # Launcher terpisah khusus Telegram Bot
