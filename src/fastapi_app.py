@@ -13,7 +13,7 @@ import onnxruntime as ort
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from dotenv import load_dotenv
 
@@ -285,7 +285,7 @@ async def predict(
         raise HTTPException(status_code=503, detail=f"Model belum tersedia: {definition['path'].name}")
     raw = await file.read()
     try:
-        image = Image.open(BytesIO(raw)).convert("RGB")
+        image = ImageOps.exif_transpose(Image.open(BytesIO(raw))).convert("RGB")
     except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(status_code=400, detail="File bukan gambar yang valid.") from exc
     detections = []
