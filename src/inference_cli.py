@@ -13,7 +13,7 @@ warnings.filterwarnings("ignore")
 from pathlib import Path
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CLASS_NAMES = [
@@ -171,17 +171,53 @@ def is_valid_chili_leaf_box(
     r, g, b = crop[:, :, 0].astype(np.int16), crop[:, :, 1].astype(np.int16), crop[:, :, 2].astype(np.int16)
     hsv_h, hsv_s, hsv_v = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
 
-    # Daun bercak putih berat (powdery mildew) di kamera indoor cenderung pucat/putih sehingga saturasinya rendah
+    # Daun bercak putih berat (powdery mildew) di kamera indoor tetap memiliki jaringan daun hijau di sekitarnya;
+    # jangan meloloskan kotak dinding abu-abu/putih polos tanpa bukti klorofil.
     cname_norm = class_name.strip().lower().replace("_", " ")
-    if "putih" in cname_norm and confidence >= 0.50:
-        non_skin_leaf = (g >= r - 10) & (hsv_v >= 28)
-        return bool(non_skin_leaf.mean() >= 0.35 and float(np.std(hsv_v)) >= 10.0)
-
-    if float(hsv_s.mean()) < 26.0:
+    if float(hsv_s.mean()) < 26.0 and "putih" not in cname_norm:
         return False
     foliage_px = (hsv_s >= 25) & (hsv_v >= 25) & (g >= r - 20) & ((g > b + 2) | ((hsv_h >= 18) & (hsv_h <= 95)))
     chlorophyll_px = (hsv_s >= 28) & (hsv_v >= 26) & ((g - r) >= 3) & ((g - b) >= 3)
+    if "putih" in cname_norm and confidence >= 0.50:
+        non_skin_leaf = (g >= r - 10) & (hsv_v >= 28)
+        return bool(
+            non_skin_leaf.mean() >= 0.35
+            and float(np.std(hsv_v)) >= 10.0
+            and foliage_px.mean() >= 0.14
+            and chlorophyll_px.mean() >= 0.04
+        )
     return bool(foliage_px.mean() >= 0.14 and chlorophyll_px.mean() >= 0.05)
+
+
+def _is_valid_tile_detection(
+    rgb: np.ndarray,
+    det: dict[str, object],
+    tile_w: int,
+    tile_h: int,
+) -> bool:
+    """Reject giant tile-spanning bush/wall boxes from quadrant tiling unless densely filled with leaf tissue."""
+    box = det.get("bbox_xyxy")
+    if not isinstance(box, list) or len(box) != 4:
+        return False
+    x1, y1, x2, y2 = [float(v) for v in box]
+    bw, bh = max(1.0, x2 - x1), max(1.0, y2 - y1)
+    w_ratio = bw / max(1.0, float(tile_w))
+    h_ratio = bh / max(1.0, float(tile_h))
+    area_ratio = (bw * bh) / max(1.0, float(tile_w * tile_h))
+    if area_ratio < 0.55 and w_ratio < 0.85 and h_ratio < 0.85:
+        return True
+
+    h, w = rgb.shape[:2]
+    ix1, iy1 = max(0, int(round(x1))), max(0, int(round(y1)))
+    ix2, iy2 = min(w, int(round(x2))), min(h, int(round(y2)))
+    if (ix2 - ix1) < 12 or (iy2 - iy1) < 12:
+        return False
+    crop = rgb[iy1:iy2, ix1:ix2]
+    hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+    r, g, b = crop[:, :, 0].astype(np.int16), crop[:, :, 1].astype(np.int16), crop[:, :, 2].astype(np.int16)
+    foliage_px = (hsv[:, :, 1] >= 28) & (hsv[:, :, 2] >= 25) & (g >= r - 12) & (g >= b + 2)
+    chlorophyll_px = (hsv[:, :, 1] >= 28) & (hsv[:, :, 2] >= 26) & ((g - r) >= 3) & ((g - b) >= 3)
+    return bool(foliage_px.mean() >= 0.62 and chlorophyll_px.mean() >= 0.35)
 
 
 def _analyze_uniform_canvas(
@@ -461,88 +497,147 @@ def _get_cnn_ort_session() -> tuple[object, str] | None:
     return _CNN_ORT_CACHE
 
 
+def _build_masked_leaf_5ch(
+    crop_rgb: np.ndarray,
+    crop_mask: np.ndarray,
+    size: int = 128,
+    normalize: bool = False,
+) -> np.ndarray:
+    """Build (128, 128, 5) float32 tensor using the exact leaf mask instead of GrabCut."""
+    crop_res = cv2.resize(crop_rgb, (size, size), interpolation=cv2.INTER_AREA)
+    m = (cv2.resize(crop_mask, (size, size), interpolation=cv2.INTER_NEAREST) > 127).astype(np.uint8) * 255
+    m_clean = cv2.erode(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=1)
+    if (m_clean > 0).mean() >= 0.08:
+        m = m_clean
+    if normalize:
+        img_f = crop_res.astype(np.float32)
+        for ch, (t_m, t_s) in enumerate([(140.0, 48.0), (175.0, 38.0), (45.0, 35.0)]):
+            vals = img_f[:, :, ch][m > 0]
+            if len(vals) > 10:
+                img_f[:, :, ch] = np.clip((img_f[:, :, ch] - vals.mean()) / (vals.std() + 1e-5) * t_s + t_m, 0, 255)
+        crop_res = img_f.astype(np.uint8)
+    interior = cv2.erode(m, _K_OPEN, iterations=1)
+    seg = cv2.bitwise_and(crop_res, crop_res, mask=m)
+    gray = cv2.cvtColor(crop_res, cv2.COLOR_RGB2GRAY)
+    clahe = cv2.bitwise_and(_CLAHE.apply(gray), m)
+    canny = cv2.bitwise_and(cv2.Canny(cv2.GaussianBlur(clahe, (3, 3), 0), 50, 150), interior)
+    return np.dstack([seg, clahe, canny]).astype(np.float32)
+
+
 def detect_foliage_contour_fallback(
     rgb: np.ndarray,
     names: list[str],
     conf_threshold: float,
     predict_batch_fn: object | None = None,
 ) -> tuple[list[dict[str, object]], np.ndarray | None]:
-    """Locate foliage contours on cluttered/indoor/macro backgrounds and verify via 7-class CNN (rejecting Bukan Daun)."""
-    h, w = rgb.shape[:2]
-    if h < 64 or w < 64:
+    """Split plant foliage into per-leaf regions via distance-transform watershed and verify via 7-class CNN."""
+    orig_h, orig_w = rgb.shape[:2]
+    if orig_h < 64 or orig_w < 64:
         return [], None
-    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
-    r, g, b = rgb[:, :, 0].astype(np.int16), rgb[:, :, 1].astype(np.int16), rgb[:, :, 2].astype(np.int16)
+
+    max_dim = max(orig_h, orig_w)
+    scale = 640.0 / max_dim if max_dim > 640 else 1.0
+    if scale < 1.0:
+        work = cv2.resize(
+            rgb,
+            (max(64, int(round(orig_w * scale))), max(64, int(round(orig_h * scale)))),
+            interpolation=cv2.INTER_AREA,
+        )
+    else:
+        work = rgb
+
+    h, w = work.shape[:2]
+    hsv = cv2.cvtColor(work, cv2.COLOR_RGB2HSV)
+    r, g, b = work[:, :, 0].astype(np.int16), work[:, :, 1].astype(np.int16), work[:, :, 2].astype(np.int16)
     fmask = (
-        (hsv[:, :, 0] >= 24)
-        & (hsv[:, :, 0] <= 90)
+        (hsv[:, :, 0] >= 22)
+        & (hsv[:, :, 0] <= 86)
         & (hsv[:, :, 1] >= 32)
-        & (hsv[:, :, 2] >= 28)
+        & (hsv[:, :, 2] >= 26)
         & (g >= r + 2)
         & (g >= b + 4)
     ).astype(np.uint8) * 255
-    fmask = cv2.morphologyEx(fmask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
-    fmask = cv2.morphologyEx(fmask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (17, 17)))
-    cnts, _ = cv2.findContours(fmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    min_area = max(6000.0, 0.03 * float(h * w))
-    cand_cnts = sorted(
-        [c for c in cnts if cv2.contourArea(c) >= min_area],
-        key=cv2.contourArea,
-        reverse=True,
-    )[:2]
-    if not cand_cnts:
+    fmask = cv2.morphologyEx(fmask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+
+    num_comp, labels, stats, _ = cv2.connectedComponentsWithStats(fmask)
+    clean = np.zeros_like(fmask)
+    min_comp = max(150, int(0.0015 * float(h * w)))
+    for i in range(1, num_comp):
+        if stats[i, cv2.CC_STAT_AREA] >= min_comp:
+            clean[labels == i] = 255
+    if (clean > 0).sum() == 0:
         return [], None
 
-    cand_contours: list[tuple[np.ndarray, list[float], bool]] = []
-    tensors: list[np.ndarray] = []
-    norm_tensors: list[np.ndarray] = []
-    for c in cand_cnts:
-        x, y, bw, bh = cv2.boundingRect(c)
-        box = [round(float(x), 2), round(float(y), 2), round(float(x + bw), 2), round(float(y + bh), 2)]
-        if is_valid_chili_leaf_box(rgb, box):
-            m_full = np.zeros((h, w), dtype=np.uint8)
-            cv2.drawContours(m_full, [c], -1, 255, thickness=cv2.FILLED)
-            mask_b = m_full > 0
-            hull_a = max(1.0, cv2.contourArea(cv2.convexHull(c)))
-            sol = float(cv2.contourArea(c)) / hull_a
-            aspect = float(max(bw, bh)) / max(1.0, float(min(bw, bh)))
-            h_med = float(np.median(hsv[:, :, 0][mask_b]))
-            s_med = float(np.median(hsv[:, :, 1][mask_b]))
-            v_std = float(np.std(hsv[:, :, 2][mask_b]))
-            gr_med = float(np.median(g[mask_b] - r[mask_b]))
-            gb_med = float(np.median(g[mask_b] - b[mask_b]))
-            # Hue klorofil daun alami berada di 24..64 (menolak dinding cat hijau-mint >= 68)
-            strong_chlorophyll_blade = (
-                24.0 <= h_med <= 64.0
-                and sol >= 0.55
-                and aspect <= 3.8
-                and s_med >= 38.0
-                and v_std >= 12.0
-                and gr_med >= 4.0
-                and gb_med >= 12.0
-            )
-            cand_contours.append((c, box, strong_chlorophyll_blade))
-            tensors.append(preprocess_cnn_5ch(crop_leaf_roi_with_padding(rgb, box, pad_ratio=0.08), size=128)[0])
+    dist = cv2.GaussianBlur(cv2.distanceTransform(clean, cv2.DIST_L2, 5), (5, 5), 0)
+    k = max(11, int(min(h, w) * 0.045) | 1)
+    dil = cv2.dilate(dist, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k)))
+    min_peak = max(3.5, float(dist.max()) * 0.16)
+    peaks = ((dist >= dil - 1e-4) & (dist >= min_peak)).astype(np.uint8)
+    _, peak_labels = cv2.connectedComponents(peaks)
+    inv_dist = np.clip(255.0 * (1.0 - dist / max(1e-5, float(dist.max()))), 0, 255).astype(np.uint8)
+    ws_markers = np.zeros_like(peak_labels, dtype=np.int32)
+    ws_markers[clean == 0] = 1
+    ws_markers[peak_labels > 0] = peak_labels[peak_labels > 0] + 1
+    ws_out = cv2.watershed(cv2.cvtColor(inv_dist, cv2.COLOR_GRAY2BGR), ws_markers)
 
-            crop_rgb = crop_leaf_roi_with_padding(rgb, box, pad_ratio=0.04)
-            crop_m = crop_leaf_roi_with_padding(m_full, box, pad_ratio=0.04)
-            img_f = cv2.resize(crop_rgb, (128, 128), interpolation=cv2.INTER_AREA).astype(np.float32)
-            m128 = (cv2.resize(crop_m, (128, 128), interpolation=cv2.INTER_NEAREST) > 127).astype(np.uint8) * 255
-            for ch, (t_m, t_s) in enumerate([(140.0, 48.0), (175.0, 38.0), (45.0, 35.0)]):
-                vals = img_f[:, :, ch][m128 > 0]
-                if len(vals) > 10:
-                    img_f[:, :, ch] = np.clip((img_f[:, :, ch] - vals.mean()) / (vals.std() + 1e-5) * t_s + t_m, 0, 255)
-            img_nu8 = img_f.astype(np.uint8)
-            seg_n = cv2.bitwise_and(img_nu8, img_nu8, mask=m128)
-            gray_n = cv2.cvtColor(img_nu8, cv2.COLOR_RGB2GRAY)
-            clahe_n = cv2.bitwise_and(_CLAHE.apply(gray_n), m128)
-            canny_n = cv2.bitwise_and(cv2.Canny(cv2.GaussianBlur(clahe_n, (3, 3), 0), 40, 120), cv2.erode(m128, _K_OPEN, iterations=1))
-            norm_tensors.append(np.dstack([seg_n, clahe_n, canny_n]).astype(np.float32))
-    if not cand_contours:
+    cand_leaves: list[tuple[int, list[float], np.ndarray, np.ndarray, float, bool]] = []
+    min_leaf_area = max(200, int(0.002 * float(h * w)))
+    for mid in range(2, int(ws_out.max()) + 1):
+        reg = ((ws_out == mid) & (clean > 0)).astype(np.uint8) * 255
+        area = int((reg > 0).sum())
+        if area < min_leaf_area:
+            continue
+        ys, xs = np.where(reg > 0)
+        x1, y1, x2, y2 = int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+        bw, bh = x2 - x1, y2 - y1
+        if bw < 16 or bh < 16 or (max(bw, bh) / max(1, min(bw, bh))) > 4.2:
+            continue
+
+        orig_box = [
+            round(float(np.clip(x1 / scale, 0.0, float(orig_w))), 2),
+            round(float(np.clip(y1 / scale, 0.0, float(orig_h))), 2),
+            round(float(np.clip(x2 / scale, 0.0, float(orig_w))), 2),
+            round(float(np.clip(y2 / scale, 0.0, float(orig_h))), 2),
+        ]
+        if not is_valid_chili_leaf_box(rgb, orig_box):
+            continue
+
+        reg_crop = reg[y1:y2, x1:x2]
+        rgb_crop = work[y1:y2, x1:x2]
+        hsv_crop = hsv[y1:y2, x1:x2]
+        rc = rgb_crop[:, :, 0].astype(np.int16)
+        gc = rgb_crop[:, :, 1].astype(np.int16)
+        bc = rgb_crop[:, :, 2].astype(np.int16)
+        mask_b = reg_crop > 0
+        h_med = float(np.median(hsv_crop[:, :, 0][mask_b]))
+        s_med = float(np.median(hsv_crop[:, :, 1][mask_b]))
+        v_std = float(np.std(hsv_crop[:, :, 2][mask_b]))
+        gr_med = float(np.median(gc[mask_b] - rc[mask_b]))
+        gb_med = float(np.median(gc[mask_b] - bc[mask_b]))
+        strong_chlorophyll_blade = (
+            24.0 <= h_med <= 64.0
+            and s_med >= 36.0
+            and v_std >= 10.0
+            and gr_med >= 4.0
+            and gb_med >= 10.0
+        )
+
+        chroma = np.maximum(np.maximum(rc, gc), bc) - np.minimum(np.minimum(rc, gc), bc)
+        eroded = cv2.erode(reg_crop, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))) > 0
+        ws_ratio = float(
+            (eroded & (hsv_crop[:, :, 2] >= 175) & (hsv_crop[:, :, 1] <= 38) & (chroma <= 28)).sum()
+        ) / max(1, int(eroded.sum()))
+        cand_leaves.append((area, orig_box, rgb_crop, reg_crop, ws_ratio, strong_chlorophyll_blade))
+
+    if not cand_leaves:
         return [], None
 
-    batch = np.stack(tensors, axis=0)
-    norm_batch = np.stack(norm_tensors, axis=0)
+    cand_leaves.sort(key=lambda item: -item[0])
+    cand_leaves = cand_leaves[:8]
+
+    batch = np.stack([_build_masked_leaf_5ch(item[2], item[3], size=128, normalize=False) for item in cand_leaves], axis=0)
+    norm_batch = np.stack([_build_masked_leaf_5ch(item[2], item[3], size=128, normalize=True) for item in cand_leaves], axis=0)
+
     if predict_batch_fn is not None:
         probs_batch = predict_batch_fn(batch)  # type: ignore[operator]
         norm_probs_batch = predict_batch_fn(norm_batch)  # type: ignore[operator]
@@ -557,15 +652,22 @@ def detect_foliage_contour_fallback(
     dets: list[dict[str, object]] = []
     best_probs: np.ndarray | None = None
     best_score = -1.0
-    for (_, box, strong_blade), probs_gc, probs_norm in zip(cand_contours, probs_batch, norm_probs_batch):
-        probs_arr = np.asarray(probs_gc, dtype=np.float32)
-        norm_arr = np.asarray(probs_norm, dtype=np.float32)
-        cid_gc = int(np.argmax(probs_arr))
-        cname_gc = names[cid_gc] if 0 <= cid_gc < len(names) else f"Class {cid_gc}"
-        non_leaf_gc = float(probs_arr[6]) if len(probs_arr) > 6 else 0.0
-        # Jika GrabCut menolak karena pencahayaan indoor redup/meredup, gunakan prediksi blade daun yang sudah dinormalisasi
-        if strong_blade and ((len(probs_arr) > 6 and cid_gc == 6) or is_non_leaf_class(cname_gc) or non_leaf_gc >= 0.50):
+    for (_, box, _, _, ws_ratio, strong_blade), probs_raw, probs_norm in zip(cand_leaves, probs_batch, norm_probs_batch):
+        probs_arr = np.asarray(probs_raw, dtype=np.float32).copy()
+        norm_arr = np.asarray(probs_norm, dtype=np.float32).copy()
+        cid_raw = int(np.argmax(probs_arr))
+        cname_raw = names[cid_raw] if 0 <= cid_raw < len(names) else f"Class {cid_raw}"
+        non_leaf_raw = float(probs_arr[6]) if len(probs_arr) > 6 else 0.0
+        # Jika prediksi mentah menolak daun berklorofil asli karena pencahayaan, gunakan versi ternormalisasi
+        if strong_blade and ((len(probs_arr) > 6 and cid_raw == 6) or is_non_leaf_class(cname_raw) or non_leaf_raw >= 0.50):
             probs_arr = norm_arr
+
+        # Hindari false positive Bercak Putih pada daun sehat yang tidak memiliki bercak putih di interior helai daun
+        if len(probs_arr) >= 4 and int(np.argmax(probs_arr)) == 2 and ws_ratio < 0.02 and float(probs_arr[3]) >= 0.05:
+            probs_arr[2] *= 0.20
+            prob_sum = float(probs_arr.sum())
+            if prob_sum > 1e-6:
+                probs_arr /= prob_sum
 
         non_leaf_prob = float(probs_arr[6]) if len(probs_arr) > 6 else 0.0
         cid = int(np.argmax(probs_arr))
@@ -811,6 +913,7 @@ def run_onnx_yolo(
             (0, max(0, half_h - pad_y), min(orig_w, half_w + pad_x), orig_h),
             (max(0, half_w - pad_x), max(0, half_h - pad_y), orig_w, orig_h),
         ]:
+            tile_w, tile_h = max(1, tx2 - tx1), max(1, ty2 - ty1)
             tile_dets.extend(
                 d
                 for d in _infer_onnx_crop(
@@ -824,6 +927,7 @@ def run_onnx_yolo(
                     str(d.get("class_name", "")),
                     float(d.get("confidence", 0.0)),
                 )
+                and _is_valid_tile_detection(rgb_np, d, tile_w, tile_h)
             )
 
     if not full_dets:
@@ -865,7 +969,7 @@ def main() -> int:
         return 1
 
     try:
-        image = Image.open(args.image).convert("RGB")
+        image = ImageOps.exif_transpose(Image.open(args.image)).convert("RGB")
     except Exception as exc:
         print(json.dumps({"error": f"File bukan gambar valid: {exc}"}))
         return 1
