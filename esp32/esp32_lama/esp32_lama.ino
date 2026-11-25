@@ -8,8 +8,21 @@
 
 // ================= PIN ESP32 =================
 #define PIN_SOIL 35
-#define RELAY1 27
-#define RELAY2 26
+
+/*
+ * PEMETAAN RELAY POMPA (Active-LOW: LOW = ON, HIGH = OFF)
+ * -----------------------------------------------------------------
+ * - RELAY 1 -> GPIO 27 : KHUSUS POMPA AIR
+ *     Menyala otomatis saat tanah kering (< autoWaterThreshold),
+ *     perintah Web/Telegram/Chatbot, atau tes manual Serial ('1').
+ * - RELAY 2 -> GPIO 25 : KHUSUS POMPA PESTISIDA
+ *     Menyala saat konfirmasi Website / Telegram, jadwal otomatis
+ *     5 hari sekali (120 jam), atau tes manual Serial ('2').
+ * -----------------------------------------------------------------
+ * Catatan: Jika modul relay Anda Active-HIGH, tukar LOW/HIGH di bawah.
+ */
+#define RELAY_POMPA_AIR       27  // Relay 1 -> Pompa Air
+#define RELAY_POMPA_PESTISIDA 25  // Relay 2 -> Pompa Pestisida
 
 #define DHTPIN 4
 #define DHTTYPE DHT22
@@ -25,10 +38,17 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 DHT dht(DHTPIN, DHTTYPE);
 
 // ================= KONFIGURASI WIFI & API =================
-const unsigned long WIFI_RETRY_MS = 15000;
+const unsigned long WIFI_RETRY_MS = 5000;
 const unsigned long SENSOR_SEND_MS = 10000;
 const unsigned long POLL_MS = 1000;
 const unsigned long AUTO_WATER_COOLDOWN_MS = 60000;
+const unsigned long LCD_INTERVAL_MS = 2500;
+const unsigned long LCD_PUMP_INTERVAL_MS = 1000;
+// Interval jadwal pestisida lokal: 5 hari (120 jam)
+const unsigned long PESTICIDE_INTERVAL_5_HARI_MS =
+  5UL * 24UL * 3600UL * 1000UL;
+const int PESTICIDE_AUTO_DURATION_SEC = 5;
+
 int autoWaterThreshold = 30;
 bool configAwalSudahSync = false;
 String pesticideScheduleMode = "";
@@ -50,32 +70,39 @@ unsigned long waktuWifiRetry = 0;
 unsigned long waktuKirim = 0;
 unsigned long waktuPoll = 0;
 unsigned long waktuSiramAuto = 0;
+unsigned long waktuTerakhirPestisidaMs = 0;
 bool kirimTahapDhtNext = false;
 bool wifiSudahTampil = false;
 bool apiTerhubung = false;
 int apiGagalBeruntun = 0;
 unsigned long waktuCekApi = 0;
-const unsigned long CEK_API_MS = 10000;
+const unsigned long CEK_API_MS = 5000;
 
 WiFiClientSecure pollSecureClient;
 HTTPClient pollHttp;
-
-unsigned long stopRelay1Ms = 0;
-unsigned long stopRelay2Ms = 0;
 
 // ================= KALIBRASI SOIL =================
 const int ADC_KERING = 3000;
 const int ADC_BASAH = 1200;
 
-// ================= VARIABEL =================
+// ================= VARIABEL SENSOR & POMPA =================
 int nilaiSoil = 0;
 int kelembapanTanah = 0;
 
 float suhu = 0;
 float kelembapanUdara = 0;
 
-bool statusRelay1 = false;
-bool statusRelay2 = false;
+// Status & timer terpisah untuk Pompa Air
+bool statusPompaAir = false;
+unsigned long mulaiTimerPompaAirMs = 0;
+unsigned long durasiPompaAirMs = 0;
+unsigned long mulaiManualPompaAirMs = 0;
+
+// Status & timer terpisah untuk Pompa Pestisida
+bool statusPompaPestisida = false;
+unsigned long mulaiTimerPompaPestisidaMs = 0;
+unsigned long durasiPompaPestisidaMs = 0;
+unsigned long mulaiManualPompaPestisidaMs = 0;
 
 unsigned long waktuBaca = 0;
 unsigned long waktuLCD = 0;
@@ -87,6 +114,13 @@ int bacaSoil();
 int hitungKelembapan(int adc);
 String kondisiTanah();
 void bacaSensor();
+void cetakBarisLCD(int baris, String teks);
+String formatStatusPompaLCD(
+  const char* label,
+  bool aktif,
+  unsigned long mulaiMs,
+  unsigned long durasiMs
+);
 void tampilLCD();
 void kirimHistoriManual(bool pestisida, unsigned long mulaiMs);
 void kontrolRelay(char perintah);
@@ -102,8 +136,11 @@ void cekApi();
 void cekKoneksiWifiDanApi();
 bool kirimPost(const String& path, const String& payload);
 void kirimSensor();
-void nyalakanRelay(int nomor, int detik, const char* sumber);
-void updateTimerRelay();
+void nyalakanPompaAir(int detik, const char* sumber);
+void matikanPompaAir(const char* alasan);
+void nyalakanPompaPestisida(int detik, const char* sumber);
+void matikanPompaPestisida(const char* alasan);
+void updateTimerPompa();
 String ambilNilai(const String& json, const String& key);
 void cekPerintahWeb();
 
@@ -111,11 +148,13 @@ void cekPerintahWeb();
 void setup() {
   Serial.begin(115200);
 
-  pinMode(RELAY1, OUTPUT);
-  pinMode(RELAY2, OUTPUT);
+  // Relay 1 = Pompa Air (GPIO 27), Relay 2 = Pompa Pestisida (GPIO 25)
+  pinMode(RELAY_POMPA_AIR, OUTPUT);
+  pinMode(RELAY_POMPA_PESTISIDA, OUTPUT);
 
-  digitalWrite(RELAY1, RELAY_OFF);
-  digitalWrite(RELAY2, RELAY_OFF);
+  // Pastikan kedua relay OFF saat ESP32 menyala
+  digitalWrite(RELAY_POMPA_AIR, RELAY_OFF);
+  digitalWrite(RELAY_POMPA_PESTISIDA, RELAY_OFF);
 
   pinMode(PIN_SOIL, INPUT);
   analogReadResolution(12);
@@ -125,23 +164,34 @@ void setup() {
   lcd.init();
   lcd.backlight();
 
-  lcd.setCursor(0, 0);
-  lcd.print("MONITOR CABAI");
-  lcd.setCursor(0, 1);
-  lcd.print("Memulai...");
+  cetakBarisLCD(0, "MONITOR CABAI");
+  cetakBarisLCD(1, "Hubung Wi-Fi...");
 
   dht.begin();
+  waktuTerakhirPestisidaMs = millis();
   mulaiWifi();
 
-  delay(2000);
-  lcd.clear();
+  delay(1500);
+  bacaSensor();
+  tampilan = 2; // Tampilkan status Wi-Fi & API terlebih dahulu
+  tampilLCD();
+  waktuLCD = millis();
 
   Serial.println("================================");
   Serial.println(" MONITORING TANAMAN CABAI");
   Serial.println("================================");
-  Serial.println("1 = Relay 1 / Pompa Air ON/OFF");
-  Serial.println("2 = Relay 2 / Pompa Pestisida ON/OFF");
-  Serial.println("0 = Matikan semua relay");
+  Serial.printf("Relay Pompa Air       : GPIO %d\n", RELAY_POMPA_AIR);
+  Serial.printf(
+    "Relay Pompa Pestisida : GPIO %d\n",
+    RELAY_POMPA_PESTISIDA
+  );
+  Serial.println("1 = Tes Pompa Air ON/OFF Manual");
+  Serial.println("2 = Tes Pompa Pestisida ON/OFF Manual");
+  Serial.println("0 = Matikan semua pompa (Emergency OFF)");
+  Serial.println(
+    "Otomatis pestisida hanya via Web/Telegram "
+    "atau 5 hari sekali."
+  );
 }
 
 // ================= BACA SOIL =================
@@ -204,11 +254,54 @@ void bacaSensor() {
     Serial.println(" %");
   }
 
-  Serial.print("Relay 1 (Pompa Air): ");
-  Serial.println(statusRelay1 ? "ON" : "OFF");
+  unsigned long sekarang = millis();
+  if (statusPompaAir) {
+    if (durasiPompaAirMs > 0) {
+      unsigned long jalan = sekarang - mulaiTimerPompaAirMs;
+      unsigned long sisaDtk = (jalan < durasiPompaAirMs)
+        ? ((durasiPompaAirMs - jalan + 999UL) / 1000UL)
+        : 0;
+      Serial.printf(
+        ">>> [POMPA AIR HIDUP / ON] GPIO %d (sisa %lu dtk) <<<\n",
+        RELAY_POMPA_AIR,
+        sisaDtk
+      );
+    } else {
+      Serial.printf(
+        ">>> [POMPA AIR HIDUP / ON] GPIO %d (Manual Serial) <<<\n",
+        RELAY_POMPA_AIR
+      );
+    }
+  } else {
+    Serial.printf(
+      "Relay Pompa Air (GPIO %d)       : MATI (OFF)\n",
+      RELAY_POMPA_AIR
+    );
+  }
 
-  Serial.print("Relay 2 (Pompa Pestisida): ");
-  Serial.println(statusRelay2 ? "ON" : "OFF");
+  if (statusPompaPestisida) {
+    if (durasiPompaPestisidaMs > 0) {
+      unsigned long jalan = sekarang - mulaiTimerPompaPestisidaMs;
+      unsigned long sisaDtk = (jalan < durasiPompaPestisidaMs)
+        ? ((durasiPompaPestisidaMs - jalan + 999UL) / 1000UL)
+        : 0;
+      Serial.printf(
+        ">>> [POMPA PESTISIDA HIDUP / ON] GPIO %d (sisa %lu dtk) <<<\n",
+        RELAY_POMPA_PESTISIDA,
+        sisaDtk
+      );
+    } else {
+      Serial.printf(
+        ">>> [POMPA PESTISIDA HIDUP / ON] GPIO %d (Manual) <<<\n",
+        RELAY_POMPA_PESTISIDA
+      );
+    }
+  } else {
+    Serial.printf(
+      "Relay Pompa Pestisida (GPIO %d) : MATI (OFF)\n",
+      RELAY_POMPA_PESTISIDA
+    );
+  }
 
   Serial.print("Status Wi-Fi: ");
   if (WiFi.status() == WL_CONNECTED) {
@@ -248,65 +341,157 @@ void bacaSensor() {
     "Deteksi Daun Web: %s (%.1f%%)%s\n",
     latestLeafCondition.c_str(),
     latestLeafConfidence * 100.0f,
-    latestLeafIsDisease ? " [PENYAKIT TERDETEKSI!]" : ""
+    latestLeafIsDisease
+      ? " [PENYAKIT TERDETEKSI - MENUNGGU KONFIRMASI]"
+      : ""
   );
 
   Serial.println("=================================");
 }
 
 // ================= TAMPIL LCD =================
+void cetakBarisLCD(int baris, String teks) {
+  if (teks.length() > 16) {
+    teks = teks.substring(0, 16);
+  }
+  while (teks.length() < 16) {
+    teks += ' ';
+  }
+  lcd.setCursor(0, baris);
+  lcd.print(teks);
+}
+
+String formatStatusPompaLCD(
+  const char* label,
+  bool aktif,
+  unsigned long mulaiMs,
+  unsigned long durasiMs
+) {
+  if (!aktif) {
+    return String(label) + ": OFF";
+  }
+  if (durasiMs > 0) {
+    unsigned long sekarang = millis();
+    unsigned long jalan = sekarang - mulaiMs;
+    unsigned long sisaDtk = (jalan < durasiMs)
+      ? ((durasiMs - jalan + 999UL) / 1000UL)
+      : 0;
+    return String(label) + ": ON (" + String(sisaDtk) + "d)";
+  }
+  return String(label) + ": ON MANUAL";
+}
+
 void tampilLCD() {
-  lcd.clear();
+  // Prioritas: jika ada pompa aktif, langsung tampilkan countdown real-time
+  if (statusPompaAir || statusPompaPestisida) {
+    cetakBarisLCD(
+      0,
+      formatStatusPompaLCD(
+        "Air ",
+        statusPompaAir,
+        mulaiTimerPompaAirMs,
+        durasiPompaAirMs
+      )
+    );
+    cetakBarisLCD(
+      1,
+      formatStatusPompaLCD(
+        "Pest",
+        statusPompaPestisida,
+        mulaiTimerPompaPestisidaMs,
+        durasiPompaPestisidaMs
+      )
+    );
+    return;
+  }
 
   if (tampilan == 0) {
-    lcd.setCursor(0, 0);
-    lcd.print("Tanah: ");
-    lcd.print(kondisiTanah());
-
-    lcd.setCursor(0, 1);
-    lcd.print("Kelembapan:");
-    lcd.print(kelembapanTanah);
-    lcd.print("%");
-  } else {
-    lcd.setCursor(0, 0);
-    lcd.print("Suhu: ");
-
+    // Slide 1: Kondisi & Kelembapan Tanah + Batas Siram Otomatis
+    cetakBarisLCD(0, "Tanah: " + kondisiTanah());
+    cetakBarisLCD(
+      1,
+      "Lembap:" + String(kelembapanTanah) +
+      "% <" + String(autoWaterThreshold) + "%"
+    );
+  } else if (tampilan == 1) {
+    // Slide 2: Suhu & Kelembapan Udara (DHT22)
+    String barisSuhu = "Suhu : ";
     if (isnan(suhu)) {
-      lcd.print("--");
+      barisSuhu += "--";
     } else {
-      lcd.print(suhu, 1);
-      lcd.print((char)223);
-      lcd.print("C");
+      barisSuhu += String(suhu, 1);
+      barisSuhu += (char)223;
+      barisSuhu += "C";
     }
 
-    lcd.setCursor(0, 1);
-    lcd.print("Udara: ");
-
+    String barisUdara = "Udara: ";
     if (isnan(kelembapanUdara)) {
-      lcd.print("--");
+      barisUdara += "--";
     } else {
-      lcd.print(kelembapanUdara, 1);
-      lcd.print("%");
+      barisUdara += String(kelembapanUdara, 1);
+      barisUdara += "%";
+    }
+
+    cetakBarisLCD(0, barisSuhu);
+    cetakBarisLCD(1, barisUdara);
+  } else if (tampilan == 2) {
+    // Slide 3: Status Koneksi Wi-Fi (dengan sinyal dBm) & API Server
+    if (WiFi.status() == WL_CONNECTED) {
+      cetakBarisLCD(0, "WiFi:OK " + String(WiFi.RSSI()) + "dBm");
+      cetakBarisLCD(
+        1,
+        apiTerhubung ? "API : TERHUBUNG" : "API : TERPUTUS"
+      );
+    } else {
+      cetakBarisLCD(0, "WiFi: RECONNECT");
+      cetakBarisLCD(1, "Mencoba ulang...");
+    }
+  } else if (tampilan == 3) {
+    // Slide 4: Ringkasan Pompa & Alamat IP ESP32
+    cetakBarisLCD(0, "Air:OFF Pest:OFF");
+    if (WiFi.status() == WL_CONNECTED) {
+      cetakBarisLCD(1, WiFi.localIP().toString());
+    } else {
+      cetakBarisLCD(1, "IP: Belum dapat");
+    }
+  } else {
+    // Slide 5: Hasil Deteksi Penyakit Daun Terakhir dari Web AI
+    if (latestLeafCondition == "Belum ada deteksi" ||
+        latestLeafCondition.length() == 0) {
+      cetakBarisLCD(0, "Daun: Belum ada");
+      cetakBarisLCD(1, "deteksi di web");
+    } else {
+      cetakBarisLCD(
+        0,
+        latestLeafIsDisease ? "DAUN: PENYAKIT!" : "Daun: SEHAT"
+      );
+      int persenConf = (int)(latestLeafConfidence * 100.0f + 0.5f);
+      String infoDaun = latestLeafCondition;
+      if (persenConf > 0) {
+        String sufiks = " " + String(persenConf) + "%";
+        if (infoDaun.length() + sufiks.length() <= 16) {
+          infoDaun += sufiks;
+        }
+      }
+      cetakBarisLCD(1, infoDaun);
     }
   }
 
-  tampilan = 1 - tampilan;
+  tampilan = (tampilan + 1) % 5;
 }
 
-// ================= KONTROL RELAY =================
-unsigned long mulaiRelay1Ms = 0;
-unsigned long mulaiRelay2Ms = 0;
-
+// ================= KONTROL RELAY MANUAL SERIAL =================
 void kirimHistoriManual(bool pestisida, unsigned long mulaiMs) {
   int detik = (millis() - mulaiMs) / 1000UL;
   if (detik < 1) detik = 1;
   if (detik > 300) detik = 300;
 
+  String label = pestisida ? "pestisida" : "air";
   String payload =
     "{\"trigger_mode\":\"manual\","
     "\"triggered_by\":\"esp32_serial\","
     "\"duration_seconds\":" + String(detik) +
-    ",\"notes\":\"Penyemprotan manual Serial Monitor ESP32\"}";
+    ",\"notes\":\"Tes semprot " + label + " manual Serial ESP32\"}";
 
   kirimPost(
     pestisida ? "/spray/pesticide/history" : "/spray/water/history",
@@ -316,57 +501,54 @@ void kirimHistoriManual(bool pestisida, unsigned long mulaiMs) {
 
 void kontrolRelay(char perintah) {
   if (perintah == '1') {
-    statusRelay1 = !statusRelay1;
-    stopRelay1Ms = 0;
-    digitalWrite(RELAY1, statusRelay1 ? RELAY_ON : RELAY_OFF);
-
-    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
-    Serial.println(
-      statusRelay1
-        ? "Pompa Air (Relay 1) STATUS: ON | Manual Serial"
-        : "Pompa Air (Relay 1) STATUS: OFF | Manual Serial"
-    );
-
-    if (statusRelay1) {
-      mulaiRelay1Ms = millis();
+    if (!statusPompaAir) {
+      statusPompaAir = true;
+      durasiPompaAirMs = 0; // Mode manual sampai dimatikan manual
+      mulaiManualPompaAirMs = millis();
+      digitalWrite(RELAY_POMPA_AIR, RELAY_ON);
+      tampilLCD();
+      waktuLCD = millis();
+      Serial.println("\n>>> [ALERT] POMPA AIR HIDUP (ON) <<<");
+      Serial.printf(
+        "Pompa Air (GPIO %d) STATUS: HIDUP | Manual Serial\n",
+        RELAY_POMPA_AIR
+      );
     } else {
-      kirimHistoriManual(false, mulaiRelay1Ms);
+      matikanPompaAir("Manual Serial");
+      kirimHistoriManual(false, mulaiManualPompaAirMs);
     }
   } else if (perintah == '2') {
-    statusRelay2 = !statusRelay2;
-    stopRelay2Ms = 0;
-    digitalWrite(RELAY2, statusRelay2 ? RELAY_ON : RELAY_OFF);
-
-    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
-    Serial.println(
-      statusRelay2
-        ? "Pompa Pestisida (Relay 2) STATUS: ON | Manual Serial"
-        : "Pompa Pestisida (Relay 2) STATUS: OFF | Manual Serial"
-    );
-
-    if (statusRelay2) {
-      mulaiRelay2Ms = millis();
+    if (!statusPompaPestisida) {
+      statusPompaPestisida = true;
+      durasiPompaPestisidaMs = 0; // Mode manual sampai dimatikan
+      mulaiManualPompaPestisidaMs = millis();
+      waktuTerakhirPestisidaMs = mulaiManualPompaPestisidaMs;
+      digitalWrite(RELAY_POMPA_PESTISIDA, RELAY_ON);
+      tampilLCD();
+      waktuLCD = millis();
+      Serial.println("\n>>> [ALERT] POMPA PESTISIDA HIDUP (ON) <<<");
+      Serial.printf(
+        "Pompa Pestisida (GPIO %d) STATUS: HIDUP | Manual Serial\n",
+        RELAY_POMPA_PESTISIDA
+      );
     } else {
-      kirimHistoriManual(true, mulaiRelay2Ms);
+      matikanPompaPestisida("Manual Serial");
+      kirimHistoriManual(true, mulaiManualPompaPestisidaMs);
     }
   } else if (perintah == '0') {
-    bool relay1Nyala = statusRelay1;
-    bool relay2Nyala = statusRelay2;
-    statusRelay1 = false;
-    statusRelay2 = false;
-    stopRelay1Ms = 0;
-    stopRelay2Ms = 0;
+    bool airNyalaManual =
+      statusPompaAir && (durasiPompaAirMs == 0);
+    bool pestisidaNyalaManual =
+      statusPompaPestisida && (durasiPompaPestisidaMs == 0);
+    matikanPompaAir("Emergency OFF Serial");
+    matikanPompaPestisida("Emergency OFF Serial");
 
-    digitalWrite(RELAY1, RELAY_OFF);
-    digitalWrite(RELAY2, RELAY_OFF);
-
-    Serial.println("\n>>> [UPDATE SEMPROT AIR & PESTISIDA] <<<");
-    Serial.println(
-      "Semua Pompa (Relay 1 & 2) STATUS: OFF | Manual Serial"
-    );
-
-    if (relay1Nyala) kirimHistoriManual(false, mulaiRelay1Ms);
-    if (relay2Nyala) kirimHistoriManual(true, mulaiRelay2Ms);
+    if (airNyalaManual) {
+      kirimHistoriManual(false, mulaiManualPompaAirMs);
+    }
+    if (pestisidaNyalaManual) {
+      kirimHistoriManual(true, mulaiManualPompaPestisidaMs);
+    }
   }
 }
 
@@ -431,6 +613,11 @@ void setStatusApi(bool status, int kode, bool paksa) {
       Serial.println(
         "\n>>> [KONEKSI] Wi-Fi: TERHUBUNG | API: TERHUBUNG <<<\n"
       );
+      if (!statusPompaAir && !statusPompaPestisida) {
+        tampilan = 2;
+        tampilLCD();
+        waktuLCD = millis();
+      }
     }
     return;
   }
@@ -450,6 +637,11 @@ void setStatusApi(bool status, int kode, bool paksa) {
       kode,
       artiKodeHttp(kode).c_str()
     );
+    if (!statusPompaAir && !statusPompaPestisida) {
+      tampilan = 2;
+      tampilLCD();
+      waktuLCD = millis();
+    }
   }
 }
 
@@ -503,18 +695,24 @@ void cekKoneksiWifiDanApi() {
       waktuCekApi = 0;
       waktuPoll = millis();
       waktuKirim = millis() - (SENSOR_SEND_MS / 2) + 3000;
+      if (!statusPompaAir && !statusPompaPestisida) {
+        tampilan = 2;
+        tampilLCD();
+        waktuLCD = millis();
+      }
     }
 
     if (!apiTerhubung &&
         (waktuCekApi == 0 || millis() - waktuCekApi >= CEK_API_MS)) {
       waktuCekApi = millis();
       cekApi();
-      updateTimerRelay();
+      updateTimerPompa();
     }
     return;
   }
 
-  if (wifiSudahTampil) {
+  bool baruTerputus = wifiSudahTampil;
+  if (baruTerputus) {
     Serial.println(
       "\n>>> [KONEKSI] Wi-Fi: TERPUTUS | API: TIDAK TERHUBUNG <<<\n"
     );
@@ -524,6 +722,11 @@ void cekKoneksiWifiDanApi() {
   pollHttp.setReuse(false);
   pollHttp.end();
   pollSecureClient.stop();
+  if (baruTerputus && !statusPompaAir && !statusPompaPestisida) {
+    tampilan = 2;
+    tampilLCD();
+    waktuLCD = millis();
+  }
 
   if (millis() - waktuWifiRetry >= WIFI_RETRY_MS) {
     Serial.printf(
@@ -578,54 +781,125 @@ void kirimSensor() {
       );
     }
   }
-  updateTimerRelay();
+  updateTimerPompa();
 }
 
-void nyalakanRelay(int nomor, int detik, const char* sumber) {
+// ================= KONTROL POMPA TERPISAH =================
+// --- RELAY 1 (GPIO 27): KONTROL KHUSUS POMPA AIR ---
+void nyalakanPompaAir(int detik, const char* sumber) {
+  if (detik < 1) detik = 1;
   unsigned long sekarang = millis();
-  if (nomor == 1) {
-    unsigned long sisaMs = (statusRelay1 && stopRelay1Ms > sekarang)
-      ? (stopRelay1Ms - sekarang)
+  unsigned long tambahanMs = (unsigned long)detik * 1000UL;
+
+  if (statusPompaAir && durasiPompaAirMs > 0) {
+    unsigned long berjalanMs = sekarang - mulaiTimerPompaAirMs;
+    unsigned long sisaMs = (berjalanMs < durasiPompaAirMs)
+      ? (durasiPompaAirMs - berjalanMs)
       : 0;
-    statusRelay1 = true;
-    digitalWrite(RELAY1, RELAY_ON);
-    stopRelay1Ms = sekarang + sisaMs + detik * 1000UL;
-    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
-    Serial.printf(
-      "Pompa Air (Relay 1) STATUS: ON %d detik | Sumber: %s\n\n",
-      detik,
-      sumber
-    );
+    mulaiTimerPompaAirMs = sekarang;
+    durasiPompaAirMs = sisaMs + tambahanMs;
   } else {
-    unsigned long sisaMs = (statusRelay2 && stopRelay2Ms > sekarang)
-      ? (stopRelay2Ms - sekarang)
-      : 0;
-    statusRelay2 = true;
-    digitalWrite(RELAY2, RELAY_ON);
-    stopRelay2Ms = sekarang + sisaMs + detik * 1000UL;
-    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
+    mulaiTimerPompaAirMs = sekarang;
+    durasiPompaAirMs = tambahanMs;
+  }
+
+  statusPompaAir = true;
+  digitalWrite(RELAY_POMPA_AIR, RELAY_ON);
+  tampilLCD();
+  waktuLCD = millis();
+
+  Serial.println("\n>>> [ALERT] POMPA AIR HIDUP (ON) <<<");
+  Serial.printf(
+    "Pompa Air (GPIO %d) HIDUP %d detik | Sumber: %s\n\n",
+    RELAY_POMPA_AIR,
+    detik,
+    sumber
+  );
+}
+
+void matikanPompaAir(const char* alasan) {
+  bool sebelumnyaNyala = statusPompaAir;
+  statusPompaAir = false;
+  durasiPompaAirMs = 0;
+  digitalWrite(RELAY_POMPA_AIR, RELAY_OFF);
+
+  if (sebelumnyaNyala) {
+    tampilLCD();
+    waktuLCD = millis();
+    Serial.println("\n>>> [INFO] POMPA AIR MATI (OFF) <<<");
     Serial.printf(
-      "Pompa Pestisida (Relay 2) STATUS: ON %d detik | Sumber: %s\n\n",
-      detik,
-      sumber
+      "Pompa Air (GPIO %d) STATUS: MATI (%s)\n\n",
+      RELAY_POMPA_AIR,
+      alasan
     );
   }
 }
 
-void updateTimerRelay() {
-  if (stopRelay1Ms != 0 && millis() >= stopRelay1Ms) {
-    stopRelay1Ms = 0;
-    statusRelay1 = false;
-    digitalWrite(RELAY1, RELAY_OFF);
-    Serial.println("\n>>> [UPDATE SEMPROT AIR] <<<");
-    Serial.println("Pompa Air (Relay 1) STATUS: OFF (selesai)\n");
+// --- RELAY 2 (GPIO 25): KONTROL KHUSUS POMPA PESTISIDA ---
+void nyalakanPompaPestisida(int detik, const char* sumber) {
+  if (detik < 1) detik = 1;
+  unsigned long sekarang = millis();
+  unsigned long tambahanMs = (unsigned long)detik * 1000UL;
+
+  if (statusPompaPestisida && durasiPompaPestisidaMs > 0) {
+    unsigned long berjalanMs = sekarang - mulaiTimerPompaPestisidaMs;
+    unsigned long sisaMs = (berjalanMs < durasiPompaPestisidaMs)
+      ? (durasiPompaPestisidaMs - berjalanMs)
+      : 0;
+    mulaiTimerPompaPestisidaMs = sekarang;
+    durasiPompaPestisidaMs = sisaMs + tambahanMs;
+  } else {
+    mulaiTimerPompaPestisidaMs = sekarang;
+    durasiPompaPestisidaMs = tambahanMs;
   }
-  if (stopRelay2Ms != 0 && millis() >= stopRelay2Ms) {
-    stopRelay2Ms = 0;
-    statusRelay2 = false;
-    digitalWrite(RELAY2, RELAY_OFF);
-    Serial.println("\n>>> [UPDATE SEMPROT PESTISIDA] <<<");
-    Serial.println("Pompa Pestisida (Relay 2) STATUS: OFF (selesai)\n");
+
+  statusPompaPestisida = true;
+  // Reset hitungan jadwal 5 hari sekali
+  waktuTerakhirPestisidaMs = sekarang;
+  digitalWrite(RELAY_POMPA_PESTISIDA, RELAY_ON);
+  tampilLCD();
+  waktuLCD = millis();
+
+  Serial.println("\n>>> [ALERT] POMPA PESTISIDA HIDUP (ON) <<<");
+  Serial.printf(
+    "Pompa Pestisida (GPIO %d) HIDUP %d detik | Sumber: %s\n\n",
+    RELAY_POMPA_PESTISIDA,
+    detik,
+    sumber
+  );
+}
+
+void matikanPompaPestisida(const char* alasan) {
+  bool sebelumnyaNyala = statusPompaPestisida;
+  statusPompaPestisida = false;
+  durasiPompaPestisidaMs = 0;
+  digitalWrite(RELAY_POMPA_PESTISIDA, RELAY_OFF);
+
+  if (sebelumnyaNyala) {
+    tampilLCD();
+    waktuLCD = millis();
+    Serial.println("\n>>> [INFO] POMPA PESTISIDA MATI (OFF) <<<");
+    Serial.printf(
+      "Pompa Pestisida (GPIO %d) STATUS: MATI (%s)\n\n",
+      RELAY_POMPA_PESTISIDA,
+      alasan
+    );
+  }
+}
+
+void updateTimerPompa() {
+  unsigned long sekarang = millis();
+
+  if (statusPompaAir &&
+      durasiPompaAirMs > 0 &&
+      (sekarang - mulaiTimerPompaAirMs >= durasiPompaAirMs)) {
+    matikanPompaAir("selesai");
+  }
+
+  if (statusPompaPestisida &&
+      durasiPompaPestisidaMs > 0 &&
+      (sekarang - mulaiTimerPompaPestisidaMs >= durasiPompaPestisidaMs)) {
+    matikanPompaPestisida("selesai");
   }
 }
 
@@ -675,9 +949,9 @@ void cekPerintahWeb() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   String url = API_BASE_URL + "/esp32/poll";
-  pollHttp.setReuse(true);
-  pollHttp.setConnectTimeout(3000);
-  pollHttp.setTimeout(4000);
+  pollHttp.setReuse(false);
+  pollHttp.setConnectTimeout(4000);
+  pollHttp.setTimeout(6000);
 
   bool began = false;
   if (url.startsWith("https://")) {
@@ -688,20 +962,26 @@ void cekPerintahWeb() {
   }
 
   if (!began) {
-    pollHttp.setReuse(false);
     pollHttp.end();
     pollSecureClient.stop();
     setStatusApi(false, -1, false);
     return;
   }
   pollHttp.addHeader("Accept", "application/json");
+  pollHttp.addHeader("Connection", "close");
+  pollHttp.addHeader("X-ESP32-Device", "1");
 
   int kode = pollHttp.GET();
-  updateTimerRelay();
+  updateTimerPompa();
 
   if (kode == 200) {
     setStatusApi(true, kode);
     String res = pollHttp.getString();
+    if (res.length() == 0) {
+      Serial.println("[API] Poll 200 tapi body respons kosong!");
+      pollHttp.end();
+      return;
+    }
 
     String thStr = ambilNilai(res, "auto_water_threshold");
     int th = thStr.length() > 0 ? thStr.toInt() : 0;
@@ -792,6 +1072,10 @@ void cekPerintahWeb() {
           Serial.println(
             "\n>>> [PERINGATAN: PENYAKIT DAUN TERDETEKSI DI WEB!] <<<"
           );
+          Serial.println(
+            "Menunggu konfirmasi pengguna di Website atau Telegram "
+            "sebelum menyemprot pestisida."
+          );
         } else {
           Serial.println(
             "\n>>> [UPDATE DETEKSI DAUN WEBSITE] <<<"
@@ -803,7 +1087,7 @@ void cekPerintahWeb() {
           latestLeafConfidence * 100.0f
         );
         const char* stTanaman = latestLeafIsDisease
-          ? "TERDETEKSI PENYAKIT (Perlu Penanganan)"
+          ? "TERDETEKSI PENYAKIT (Perlu Konfirmasi Web/Telegram)"
           : "Daun Sehat / Normal";
         Serial.printf("Status Tanaman     : %s\n", stTanaman);
         Serial.printf(
@@ -877,20 +1161,22 @@ void cekPerintahWeb() {
       }
     }
 
+    // Perintah Pompa Air dari Website / Telegram / Chatbot
     if (ambilNilai(res, "spray_water") == "true") {
       int d = ambilNilai(res, "water_duration_seconds").toInt();
-      nyalakanRelay(
-        1,
+      nyalakanPompaAir(
         d > 0 ? d : 5,
-        "Web / Telegram / Chatbot"
+        "Website / Telegram / Chatbot"
       );
     }
+
+    // Perintah Pompa Pestisida HANYA dari konfirmasi Website / Telegram
+    // atau jadwal 5 hari sekali
     if (ambilNilai(res, "spray_pesticide") == "true") {
       int d = ambilNilai(res, "pesticide_duration_seconds").toInt();
-      nyalakanRelay(
-        2,
+      nyalakanPompaPestisida(
         d > 0 ? d : 5,
-        "Web / Telegram / Chatbot"
+        "Konfirmasi Website / Telegram / Jadwal Server"
       );
     }
     pollHttp.end();
@@ -912,7 +1198,7 @@ void cekPerintahWeb() {
 // ================= LOOP =================
 void loop() {
   cekKoneksiWifiDanApi();
-  updateTimerRelay();
+  updateTimerPompa();
 
   if (Serial.available()) {
     char perintah = Serial.read();
@@ -926,23 +1212,47 @@ void loop() {
       millis() - waktuPoll >= POLL_MS) {
     waktuPoll = millis();
     cekPerintahWeb();
-    updateTimerRelay();
+    updateTimerPompa();
+  }
+
+  // Jadwal lokal 5 hari sekali (120 jam) untuk Pompa Pestisida
+  // (fallback jika server offline / belum pernah semprot)
+  unsigned long selangPestisidaMs =
+    millis() - waktuTerakhirPestisidaMs;
+  if (!statusPompaPestisida &&
+      selangPestisidaMs >= PESTICIDE_INTERVAL_5_HARI_MS) {
+    nyalakanPompaPestisida(
+      PESTICIDE_AUTO_DURATION_SEC,
+      "Jadwal Otomatis 5 Hari Sekali"
+    );
+    if (WiFi.status() == WL_CONNECTED && apiTerhubung) {
+      kirimPost(
+        "/spray/pesticide/history",
+        "{\"trigger_mode\":\"schedule_5_days\","
+        "\"triggered_by\":\"esp32_jadwal_5_hari\","
+        "\"duration_seconds\":" + String(PESTICIDE_AUTO_DURATION_SEC) +
+        ",\"notes\":\"Penyemprotan pestisida otomatis "
+        "tiap 5 hari sekali (120 jam)\"}"
+      );
+    }
   }
 
   if (millis() - waktuBaca >= 2000) {
     waktuBaca = millis();
     bacaSensor();
-    updateTimerRelay();
+    updateTimerPompa();
 
+    // Otomatis menyiram AIR saat tanah kering
+    // (Pompa Pestisida tidak ikut menyala)
     bool cooldownSelesai = (
       waktuSiramAuto == 0 ||
       millis() - waktuSiramAuto >= AUTO_WATER_COOLDOWN_MS
     );
     if (kelembapanTanah < autoWaterThreshold &&
-        !statusRelay1 &&
+        !statusPompaAir &&
         cooldownSelesai) {
       waktuSiramAuto = millis();
-      nyalakanRelay(1, 5, "Otomatis (Tanah Kering)");
+      nyalakanPompaAir(5, "Otomatis (Tanah Kering)");
       if (WiFi.status() == WL_CONNECTED && apiTerhubung) {
         String notes =
           "Penyiraman otomatis ESP32 (batas <" +
@@ -966,7 +1276,11 @@ void loop() {
     kirimSensor();
   }
 
-  if (millis() - waktuLCD >= 3000) {
+  unsigned long intervalLcdAktif =
+    (statusPompaAir || statusPompaPestisida)
+      ? LCD_PUMP_INTERVAL_MS
+      : LCD_INTERVAL_MS;
+  if (millis() - waktuLCD >= intervalLcdAktif) {
     waktuLCD = millis();
     tampilLCD();
   }
