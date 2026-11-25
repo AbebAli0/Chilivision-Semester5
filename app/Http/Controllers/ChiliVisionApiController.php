@@ -72,6 +72,20 @@ class ChiliVisionApiController extends Controller
     }
 
     /**
+     * Cek apakah label hasil deteksi termasuk kondisi penyakit daun.
+     */
+    private function isDiseaseClass(string $className): bool
+    {
+        $trimmed = trim($className);
+        if ($trimmed === '' || $trimmed === 'Tidak Terdeteksi' || $trimmed === 'Belum ada deteksi') {
+            return false;
+        }
+
+        return ! $this->leafInference->isHealthyClassName($trimmed)
+            && ! $this->leafInference->isNonLeafClassName($trimmed);
+    }
+
+    /**
      * Hitung 64-bit average perceptual hash (16 hex chars) untuk perbandingan kemiripan gambar daun.
      */
     private function computePerceptualHash(string $rawBytes): string
