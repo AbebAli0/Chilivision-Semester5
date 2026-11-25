@@ -1260,7 +1260,7 @@
             </button>
             <span class="badge laravel">⚡ Laravel Full-Stack</span>
             <span class="badge mysql">🗄️ TiDB Cloud Connected</span>
-            <span class="esp32-pill" id="navEsp32Badge"><span class="esp32-dot"></span><span>ESP32: Memuat...</span></span>
+            <span class="esp32-pill" id="navEsp32Badge"><span class="esp32-dot"></span><span>ESP32: Loading...</span></span>
             <a class="badge" href="api" target="_blank">📚 Dokumentasi &amp; Playground API (/api) ↗</a>
             <a class="badge" href="api?format=json" target="_blank">📄 Raw JSON Spec ↗</a>
             <a class="badge" href="api/dashboard/state" target="_blank">📡 Live State JSON ↗</a>
@@ -1282,7 +1282,7 @@
                     <span>🍃 DETEKSI DAUN TERAKHIR</span>
                     <span class="kpi-badge" id="kpiLeafCount">0 tersimpan</span>
                 </div>
-                <div class="kpi-val" id="kpiLeafName">Memuat...</div>
+                <div class="kpi-val" id="kpiLeafName">Loading...</div>
                 <div class="kpi-sub" id="kpiLeafMeta">Jika daun tidak berubah, gambar tidak dikirim ke database.</div>
             </div>
             <div><span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span></div>
@@ -1295,7 +1295,7 @@
                     <span class="kpi-badge" id="kpiSoilStatus">Optimal</span>
                 </div>
                 <div class="kpi-val" id="kpiSoilVal">-- %</div>
-                <div class="kpi-sub" id="kpiSoilMeta">Menunggu pembacaan sensor...</div>
+                <div class="kpi-sub" id="kpiSoilMeta">Waiting for sensor reading...</div>
             </div>
             <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
         </div>
@@ -1307,7 +1307,7 @@
                     <span class="kpi-badge" id="kpiDhtStatus">Optimal</span>
                 </div>
                 <div class="kpi-val" id="kpiDhtVal">-- °C / -- %</div>
-                <div class="kpi-sub" id="kpiDhtMeta">Menunggu pembacaan sensor...</div>
+                <div class="kpi-sub" id="kpiDhtMeta">Waiting for sensor reading...</div>
             </div>
             <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
         </div>
@@ -1315,7 +1315,7 @@
         <div class="kpi-card">
             <div>
                 <div class="kpi-header">
-                    <span>⏱️ HISTORI PENYEMPROTAN TERAKHIR</span>
+                    <span>⏱️ RIWAYAT PENYEMPROTAN TERAKHIR</span>
                     <span class="kpi-badge">TiDB Cloud Log</span>
                 </div>
                 <div class="kpi-sub" style="margin-top:4px;">
@@ -1353,7 +1353,7 @@
             <div class="toolbar">
                 <div>
                     <label class="field-label" for="cameraSelect">🎥 Sumber kamera</label>
-                    <select id="cameraSelect"><option>Memuat kamera...</option></select>
+                    <select id="cameraSelect"><option>loading Camera...</option></select>
                 </div>
                 <div>
                     <label class="field-label" for="model">🧠 Model analisis AI (ONNX)</label>
@@ -1442,7 +1442,7 @@
 
                 <div class="chat-box">
                     <div class="chat-messages" id="chatMessages">
-                        <div class="chat-bubble bot">Memuat pesan chatbot dari database TiDB Cloud...</div>
+                        <div class="chat-bubble bot">Load chatbot message from TiDB Cloud database...</div>
                     </div>
                     <div class="chat-quick-chips">
                         <button type="button" class="chip" onclick="sendQuickCommand('/status')">📊 Status</button>
@@ -1506,12 +1506,12 @@
 
             <div class="spray-box">
                 <h4>💧 Histori Penyemprotan Terakhir Air (Otomatis Saat Tanah Kering &lt;30% &amp; Manual)</h4>
-                <div class="spray-meta" id="waterHistoryBox">Memuat dari TiDB Cloud...</div>
+                <div class="spray-meta" id="waterHistoryBox">Load from TiDB Cloud...</div>
             </div>
 
             <div class="spray-box" style="margin-bottom:0;">
                 <h4 id="pesticideScheduleHeading">🧪 Histori &amp; Jadwal Pestisida (Tiap 5 Hari Sekali)</h4>
-                <div class="spray-meta" id="pesticideHistoryBox">Memuat dari TiDB Cloud...</div>
+                <div class="spray-meta" id="pesticideHistoryBox">Load from TiDB Cloud...</div>
                 <div id="pesticidePolicyNote" style="margin-top:8px;padding:8px 11px;border-radius:9px;background:rgba(124, 58, 237, 0.12);color:var(--text-main);font-size:.74rem;font-weight:600;border:1px solid rgba(124, 58, 237, 0.3);">
                     ℹ️ Kebijakan Pestisida &amp; Air: Saat penyakit daun terdeteksi, bot mengirim <strong>Notifikasi Konfirmasi di Telegram</strong>. Penyemprotan otomatis pestisida berjalan <strong>Tiap 5 Hari Sekali (120 Jam)</strong>, sedangkan <strong>Air otomatis menyemprot saat Tanah Kering (&lt;30%)</strong>.
                 </div>
@@ -1529,7 +1529,7 @@
 
             <div class="spray-box">
                 <h4>🌱 Pembacaan Soil Moisture Terakhir</h4>
-                <div class="spray-meta" id="soilDetailBox">Memuat...</div>
+                <div class="spray-meta" id="soilDetailBox">Loading...</div>
             </div>
 
             <form onsubmit="submitSoilMoisture(event)">
@@ -1553,7 +1553,7 @@
 
             <div class="spray-box">
                 <h4>🌡️ Pembacaan DHT22 Terakhir</h4>
-                <div class="spray-meta" id="dhtDetailBox">Memuat...</div>
+                <div class="spray-meta" id="dhtDetailBox">Loading...</div>
             </div>
 
             <form onsubmit="submitDht11(event)">
@@ -1576,7 +1576,7 @@
                     <h2>🔌 Monitoring Hardware ESP32 &amp; Background Scheduler</h2>
                     <p class="card-subtitle">Status heartbeat mikrokontroler via <code>/api/esp32/poll</code> &amp; pembacaan sensor + pengecekan jadwal latar belakang.</p>
                 </div>
-                <span class="esp32-pill" id="esp32StatusPill"><span class="esp32-dot"></span><span id="esp32StatusText">Memuat...</span></span>
+                <span class="esp32-pill" id="esp32StatusPill"><span class="esp32-dot"></span><span id="esp32StatusText">Loading...</span></span>
             </div>
             <div class="spray-box" style="margin-bottom:0;">
                 <div class="spray-meta" id="esp32HardwareDetail">Memuat status perangkat ESP32...</div>
