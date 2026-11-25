@@ -12,12 +12,12 @@
 
 | Branch | Jobdesk | Anggota & Akun GitHub | Cakupan Modul |
 | :--- | :--- | :--- | :--- |
-| [**`backend`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/backend) | **Backend Engineer** | **Ali Zaenal Abidin Al Habsyie** ([@AbebAli0](https://github.com/AbebAli0)) | REST API Laravel, Skema Database TiDB Cloud/MySQL, Chatbot Gemini AI, Integrasi Telegram Bot, & Scheduler |
-| [**`frontend`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/frontend) | **Frontend Developer** | **Muhammad Fitrah Abdul Rahman Saleh** ([@mfitrah1502](https://github.com/mfitrah1502)) | Dashboard Monitoring ChiliVision, Live Kamera, Grafik Tren Sensor Soil Moisture & DHT22, & Halaman API Docs |
-| [**`training-model`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/training-model) | **Training Model / AI Engineer** | **Daffamanta Ardra Hidayat** ([@Daffamanta](https://github.com/Daffamanta)) | Preprocessing Dataset, Training & Evaluasi Model YOLOv8n & CNN 5-Channel (ONNX), serta FastAPI Inference Worker |
-| [**`iot`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/iot) | **IoT & Hardware Engineer** | **Mohammad Sabilillah** ([@sabilillah123](https://github.com/sabilillah123)) | Firmware ESP32, Pembacaan Sensor Soil Moisture & DHT22, Kontrol Relay Pompa Air & Pestisida, serta LCD I2C |
-| [**`qa-testing`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/qa-testing) | **QA & Testing Engineer** | **Khairunnisa Nabilah** ([@Khairunnisanabilah50](https://github.com/Khairunnisanabilah50)) | Pengujian Otomatis PHPUnit (37 Feature & Unit Tests), Koleksi Uji API Postman, & Validasi QA Sistem |
-| [**`main`**](https://github.com/AbebAli0/Chilivision-Semester5/tree/main) | **Main (Integrasi Utama)** | **Seluruh Anggota Tim** | Gabungan (*Merge*) terintegrasi dari seluruh branch modul (`backend`, `frontend`, `training-model`, `iot`, dan `qa-testing`) |
+| [**`backend`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/backend) | **Backend Engineer** | **Ali Zaenal Abidin Al Habsyie** ([@happiestvrgo](https://github.com/happiestvrgo)) | REST API Laravel, Skema Database TiDB Cloud/MySQL, Chatbot Gemini AI, Integrasi Telegram Bot, & Scheduler |
+| [**`frontend`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/frontend) | **Frontend Developer** | **Muhammad Fitrah Abdul Rahman Saleh** ([@mfitrah1502](https://github.com/mfitrah1502)) | Dashboard Monitoring ChiliVision, Live Kamera, Grafik Tren Sensor Soil Moisture & DHT22, & Halaman API Docs |
+| [**`training-model`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/training-model) | **Training Model / AI Engineer** | **Daffamanta Ardra Hidayat** ([@Daffamanta](https://github.com/Daffamanta)) | Preprocessing Dataset, Training & Evaluasi Model YOLOv8n & CNN 5-Channel (ONNX), serta FastAPI Inference Worker |
+| [**`iot`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/iot) | **IoT & Hardware Engineer** | **Mohammad Sabilillah** ([@sabilillah123](https://github.com/sabilillah123)) | Firmware ESP32, Pembacaan Sensor Soil Moisture & DHT22, Kontrol Relay Pompa Air & Pestisida, serta LCD I2C |
+| [**`qa-testing`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/qa-testing) | **QA & Testing Engineer** | **Khairunnisa Nabilah** ([@Khairunnisanabilah50](https://github.com/Khairunnisanabilah50)) | Pengujian Otomatis PHPUnit (37 Feature & Unit Tests), Koleksi Uji API Postman, & Validasi QA Sistem |
+| [**`main`**](https://github.com/happiestvrgo/Chilivision-Semester5/tree/main) | **Main (Integrasi Utama)** | **Seluruh Anggota Tim** | Gabungan (*Merge*) terintegrasi dari seluruh branch modul (`backend`, `frontend`, `training-model`, `iot`, dan `qa-testing`) |
 
 ---
 
