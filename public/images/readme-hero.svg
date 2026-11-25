@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" fill="none">
+  <defs>
+    <!-- Main Card Gradient -->
+    <linearGradient id="heroBg" x1="0" y1="0" x2="1200" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#05140c"/>
+      <stop offset="50%" stop-color="#0a2417"/>
+      <stop offset="100%" stop-color="#071911"/>
+    </linearGradient>
+
+    <!-- Ambient Glows -->
+    <radialGradient id="glowGreen" cx="240" cy="170" r="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.34"/>
+      <stop offset="55%" stop-color="#16a34a" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#05140c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRed" cx="1030" cy="70" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.22"/>
+      <stop offset="60%" stop-color="#b91c1c" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#071911" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowTeal" cx="760" cy="310" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#071911" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Border Stroke -->
+    <linearGradient id="cardBorder" x1="0" y1="0" x2="1200" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.55"/>
+      <stop offset="50%" stop-color="#a7f3d0" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0.45"/>
+    </linearGradient>
+
+    <!-- Logo Badge Gradients -->
+    <linearGradient id="logoBg" x1="88" y1="54" x2="312" y2="278" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#165232"/>
+      <stop offset="55%" stop-color="#0d3520"/>
+      <stop offset="100%" stop-color="#061c10"/>
+    </linearGradient>
+    <linearGradient id="logoGlass" x1="88" y1="54" x2="312" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="115" y1="85" x2="285" y2="255" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#86efac" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#22c55e" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#f87171" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="chiliBody" x1="158" y1="116" x2="245" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff6b61"/>
+      <stop offset="45%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+    <linearGradient id="leafBody" x1="186" y1="90" x2="268" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#bbf7d0"/>
+      <stop offset="50%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="370" y1="92" x2="800" y2="164" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="62%" stop-color="#dcfce7"/>
+      <stop offset="100%" stop-color="#86efac"/>
+    </linearGradient>
+
+    <!-- Subtle Technical Dot Grid Pattern -->
+    <pattern id="dotGrid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.1" fill="#86efac" fill-opacity="0.12"/>
+    </pattern>
+
+    <!-- Drop Shadows -->
+    <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#020a05" flood-opacity="0.65"/>
+    </filter>
+    <filter id="softGlow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#04130a" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded Presentation Container -->
+  <rect x="2" y="2" width="1196" height="336" rx="28" fill="url(#heroBg)" stroke="url(#cardBorder)" stroke-width="2"/>
+  <rect x="2" y="2" width="1196" height="336" rx="28" fill="url(#dotGrid)"/>
+  <rect x="2" y="2" width="1196" height="336" rx="28" fill="url(#glowGreen)"/>
+  <rect x="2" y="2" width="1196" height="336" rx="28" fill="url(#glowRed)"/>
+  <rect x="2" y="2" width="1196" height="336" rx="28" fill="url(#glowTeal)"/>
+
+  <!-- Decorative Right Orbital Arcs -->
+  <g opacity="0.22">
+    <circle cx="1070" cy="170" r="115" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="6 8"/>
+    <circle cx="1070" cy="170" r="165" stroke="#86efac" stroke-width="1" stroke-dasharray="3 10"/>
+    <circle cx="1070" cy="170" r="68" stroke="#f87171" stroke-width="1.2" stroke-dasharray="4 6"/>
+  </g>
+
+  <!-- Upgraded Presentation Logo Emblem -->
+  <g filter="url(#logoShadow)">
+    <!-- Outer Halo Ring -->
+    <circle cx="200" cy="170" r="118" stroke="#4ade80" stroke-width="1.5" stroke-opacity="0.28" stroke-dasharray="8 8"/>
+    <!-- Squircle Glass Badge -->
+    <rect x="92" y="62" width="216" height="216" rx="52" fill="url(#logoBg)" stroke="#4ade80" stroke-width="2.5" stroke-opacity="0.55"/>
+    <!-- Top Glass Specular Highlight -->
+    <path d="M144 64 H256 C284 64 306 86 306 114 V134 C252 152 148 152 94 134 V114 C94 86 116 64 144 64 Z" fill="url(#logoGlass)"/>
+    <!-- Inner Rim Highlight -->
+    <rect x="96" y="66" width="208" height="208" rx="48" stroke="#ffffff" stroke-width="1" stroke-opacity="0.16"/>
+
+    <!-- AI Computer Vision Scanner Reticle Corners -->
+    <g stroke="#4ade80" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+      <path d="M126 122 V102 Q126 96 132 96 H152"/>
+      <path d="M248 96 H268 Q274 96 274 102 V122"/>
+      <path d="M126 218 V238 Q126 244 132 244 H152"/>
+      <path d="M248 244 H268 Q274 244 274 238 V218"/>
+    </g>
+
+    <!-- Orbit Rings -->
+    <circle cx="200" cy="174" r="65" stroke="url(#ringGrad)" stroke-width="3.2" stroke-dasharray="10 7" opacity="0.82"/>
+    <circle cx="200" cy="174" r="49" stroke="#86efac" stroke-width="1.4" stroke-opacity="0.32"/>
+
+    <!-- Sensor Telemetry Nodes -->
+    <circle cx="200" cy="109" r="5" fill="#4ade80"/>
+    <circle cx="200" cy="109" r="9" fill="#4ade80" fill-opacity="0.22"/>
+    <circle cx="265" cy="174" r="5" fill="#38bdf8"/>
+    <circle cx="265" cy="174" r="9" fill="#38bdf8" fill-opacity="0.22"/>
+    <circle cx="135" cy="174" r="5" fill="#f87171"/>
+    <circle cx="135" cy="174" r="9" fill="#f87171" fill-opacity="0.22"/>
+
+    <!-- Chili Leaf -->
+    <g filter="url(#softGlow)">
+      <path d="M198 122 C215 100, 252 102, 260 130 C250 155, 222 164, 200 149 Z" fill="url(#leafBody)"/>
+      <path d="M202 136 Q228 128 250 128" stroke="#ecfdf5" stroke-width="2.4" stroke-linecap="round" opacity="0.82"/>
+    </g>
+
+    <!-- Red Chili Pepper -->
+    <g filter="url(#softGlow)">
+      <path d="M187 100 C185 111, 191 120, 196 126" stroke="#4ade80" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M181 126 C189 118, 204 120, 209 130 C200 134, 189 134, 181 126 Z" fill="#22c55e"/>
+      <path d="M181 128 C166 145, 160 179, 175 207 C188 231, 218 241, 242 227 C248 223, 246 216, 239 216 C218 218, 200 205, 196 182 C192 161, 200 143, 207 130 C200 124, 189 124, 181 128 Z" fill="url(#chiliBody)"/>
+      <path d="M179 145 C172 164, 174 186, 186 205" stroke="#fecaca" stroke-width="3.8" stroke-linecap="round" opacity="0.72"/>
+    </g>
+  </g>
+
+  <!-- Eyebrow Pill -->
+  <g>
+    <rect x="366" y="54" width="388" height="32" rx="16" fill="#16a34a" fill-opacity="0.18" stroke="#4ade80" stroke-opacity="0.45" stroke-width="1"/>
+    <circle cx="386" cy="70" r="4.5" fill="#4ade80"/>
+    <text x="401" y="75" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.4">POLITEKNIK NEGERI JEMBER · SEMESTER 5</text>
+  </g>
+
+  <!-- Main Title -->
+  <text x="364" y="152" fill="url(#titleGrad)" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="62" font-weight="800" letter-spacing="-1.6">ChiliVision</text>
+
+  <!-- Subtitle -->
+  <text x="366" y="191" fill="#d1fae5" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="20" font-weight="600">Sistem Monitoring &amp; Pengendalian Penyakit Tanaman Cabai Pintar</text>
+  <text x="366" y="220" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="500">Computer Vision ONNX · IoT ESP32 Otomatis · Chatbot Gemini AI · Telegram Bot 2 Arah</text>
+
+  <!-- Tech Pills Row -->
+  <g font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700">
+    <!-- Pill 1 -->
+    <rect x="366" y="248" width="110" height="34" rx="17" fill="#ef4444" fill-opacity="0.16" stroke="#f87171" stroke-opacity="0.45"/>
+    <text x="421" y="270" text-anchor="middle" fill="#fecaca">Laravel 13</text>
+
+    <!-- Pill 2 -->
+    <rect x="488" y="248" width="120" height="34" rx="17" fill="#0ea5e9" fill-opacity="0.16" stroke="#38bdf8" stroke-opacity="0.45"/>
+    <text x="548" y="270" text-anchor="middle" fill="#bae6fd">TiDB Cloud</text>
+
+    <!-- Pill 3 -->
+    <rect x="620" y="248" width="166" height="34" rx="17" fill="#22c55e" fill-opacity="0.16" stroke="#4ade80" stroke-opacity="0.45"/>
+    <text x="703" y="270" text-anchor="middle" fill="#bbf7d0">YOLOv8n &amp; CNN ONNX</text>
+
+    <!-- Pill 4 -->
+    <rect x="798" y="248" width="114" height="34" rx="17" fill="#a855f7" fill-opacity="0.18" stroke="#c084fc" stroke-opacity="0.45"/>
+    <text x="855" y="270" text-anchor="middle" fill="#e9d5ff">Gemini AI</text>
+
+    <!-- Pill 5 -->
+    <rect x="924" y="248" width="108" height="34" rx="17" fill="#f59e0b" fill-opacity="0.16" stroke="#fbbf24" stroke-opacity="0.45"/>
+    <text x="978" y="270" text-anchor="middle" fill="#fde68a">ESP32 IoT</text>
+
+    <!-- Pill 6 -->
+    <rect x="1044" y="248" width="116" height="34" rx="17" fill="#14b8a6" fill-opacity="0.16" stroke="#2dd4bf" stroke-opacity="0.45"/>
+    <text x="1102" y="270" text-anchor="middle" fill="#ccfbf1">Telegram</text>
+  </g>
+</svg>
