@@ -320,4 +320,43 @@ class HardwareAndReportsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('bot_reply.intent', 'update_auto_water_threshold_invalid');
     }
+
+    public function test_esp32_poll_includes_latest_leaf_disease_status_without_error(): void
+    {
+        Http::fake();
+
+        LeafDetection::create([
+            'model_id' => 'yolov8n-chili',
+            'model_name' => 'Yolov8n',
+            'class_id' => 1,
+            'class_name' => 'bercak_daun',
+            'confidence' => 0.88,
+            'detection_count' => 1,
+            'detections_json' => [],
+            'image_hash' => hash('sha256', 'poll-bercak'),
+            'recommendation' => 'Pantau daun dan konfirmasi penyemprotan.',
+        ]);
+
+        $this->getJson('/api/esp32/poll')
+            ->assertOk()
+            ->assertJsonPath('latest_leaf_condition', 'Bercak Daun')
+            ->assertJsonPath('latest_leaf_is_disease', true);
+
+        LeafDetection::create([
+            'model_id' => 'yolov8n-chili',
+            'model_name' => 'Yolov8n',
+            'class_id' => 0,
+            'class_name' => 'daun_sehat',
+            'confidence' => 0.95,
+            'detection_count' => 1,
+            'detections_json' => [],
+            'image_hash' => hash('sha256', 'poll-sehat'),
+            'recommendation' => 'Tanaman sehat.',
+        ]);
+
+        $this->getJson('/api/esp32/poll')
+            ->assertOk()
+            ->assertJsonPath('latest_leaf_condition', 'Daun Sehat')
+            ->assertJsonPath('latest_leaf_is_disease', false);
+    }
 }
