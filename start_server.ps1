@@ -205,10 +205,12 @@ $balancerMembers
 </Proxy>
 
 ProxyPass /storage !
-ProxyPass /models !
+ProxyPass /images !
+ProxyPass /models/ !
 ProxyPass /build !
 ProxyPass /favicon.ico !
 ProxyPass /robots.txt !
+ProxyPass /models balancer://phpcluster/api/models
 ProxyPass / balancer://phpcluster/
 ProxyPassReverse / balancer://phpcluster/
 
