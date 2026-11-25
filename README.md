@@ -51,7 +51,7 @@
         <img src="https://img.shields.io/badge/Backend-backend-16A34A?style=flat-square" alt="Branch backend"/>
       </a>
       <br>
-      <sub>REST API Laravel, TiDB Cloud, Chatbot Gemini AI, Telegram Bot &amp; Scheduler</sub>
+      <sub>Server REST API Laravel, Database TiDB Cloud, Chatbot Gemini AI, Bot Telegram &amp; Penjadwalan Otomatis</sub>
     </td>
     <td align="center" width="20%" valign="top">
       <a href="https://github.com/mfitrah1502">
@@ -66,7 +66,7 @@
         <img src="https://img.shields.io/badge/Frontend-frontend-0284C7?style=flat-square" alt="Branch frontend"/>
       </a>
       <br>
-      <sub>Dashboard Liquid Glass, Live Kamera, Grafik Tren Sensor &amp; API Playground</sub>
+      <sub>Tampilan Dashboard Web, Kamera Deteksi Daun, Grafik Sensor &amp; Halaman Uji API</sub>
     </td>
     <td align="center" width="20%" valign="top">
       <a href="https://github.com/Daffamanta">
@@ -81,7 +81,7 @@
         <img src="https://img.shields.io/badge/AI_Model-training--model-7C3AED?style=flat-square" alt="Branch training-model"/>
       </a>
       <br>
-      <sub>Dataset, Training &amp; Evaluasi YOLOv8n &amp; CNN 5-Ch ONNX, FastAPI Worker</sub>
+      <sub>Pengolahan Dataset, Pelatihan Model AI (YOLOv8n &amp; CNN) &amp; Layanan Deteksi Gambar</sub>
     </td>
     <td align="center" width="20%" valign="top">
       <a href="https://github.com/sabilillah123">
@@ -96,7 +96,7 @@
         <img src="https://img.shields.io/badge/IoT-iot-D97706?style=flat-square" alt="Branch iot"/>
       </a>
       <br>
-      <sub>Firmware ESP32, Sensor Soil &amp; DHT22, Kontrol Relay Pompa &amp; LCD I2C</sub>
+      <sub>Program ESP32, Pembacaan Sensor Tanah &amp; Suhu, Kontrol Relay Pompa &amp; Layar LCD</sub>
     </td>
     <td align="center" width="20%" valign="top">
       <a href="https://github.com/nabilah-kh">
@@ -111,27 +111,25 @@
         <img src="https://img.shields.io/badge/QA_Test-qa--testing-DB2777?style=flat-square" alt="Branch qa-testing"/>
       </a>
       <br>
-      <sub>38 Feature &amp; Unit Tests PHPUnit, Koleksi Uji Postman &amp; Validasi QA</sub>
+      <sub>Pengujian Otomatis (38 Test PHPUnit), Uji Endpoint API di Postman &amp; Pengecekan Kualitas Sistem</sub>
     </td>
   </tr>
 </table>
-
-<sub>Seluruh branch modul (<code>backend</code>, <code>frontend</code>, <code>training-model</code>, <code>iot</code>, dan <code>qa-testing</code>) digabungkan secara terintegrasi ke branch utama <a href="https://github.com/happiestvrgo/Chilivision-Semester5/tree/main"><code>main</code></a>.</sub>
 
 </div>
 
 ---
 
-## Arsitektur Sistem
+## Alur Kerja Sistem
 
 ```mermaid
 flowchart LR
-    ESP["ESP32 IoT<br/>Soil Moisture + DHT22 + Relay + LCD"] <-->|HTTPS REST API| API["Laravel 13 Backend<br/>REST API + Scheduler"]
-    WEB["Dashboard Web<br/>Liquid Glass UI + Live Cam"] <-->|JSON + Live State| API
-    TG["Telegram Bot 2 Arah<br/>@chili_vision_bot"] <-->|Webhook / Polling| API
-    API <--> DB[("TiDB Cloud<br/>MySQL TLS")]
-    API <--> AI["FastAPI / CLI Inference<br/>YOLOv8n & CNN 5-Ch ONNX"]
-    API <--> GEM["Gemini AI<br/>Smart Agronomist Chatbot"]
+    ESP["Alat IoT ESP32<br/>Sensor Tanah, Suhu, Pompa & LCD"] <-->|Kirim Data & Ambil Perintah| API["Server Laravel<br/>Pengelola API & Jadwal Otomatis"]
+    WEB["Website Dashboard<br/>Kamera, Grafik Sensor & Chatbot"] <-->|Pantau & Kontrol| API
+    TG["Bot Telegram<br/>@chili_vision_bot"] <-->|Notifikasi & Perintah| API
+    API <--> DB[("Database TiDB Cloud<br/>Penyimpanan Data")]
+    API <--> AI["Model AI (YOLOv8n & CNN)<br/>Deteksi Penyakit Daun"]
+    API <--> GEM["Gemini AI<br/>Asisten Chatbot"]
 ```
 
 ---
@@ -140,8 +138,8 @@ flowchart LR
 
 | Modul | Kemampuan Utama |
 | :--- | :--- |
-| **Deteksi & Klasifikasi AI (2 Model ONNX)** | • `yolov8n-chili` (`yolov8n_chili.onnx`) — *Default*, YOLOv8n Deteksi Objek<br>• `cnn-5ch-chili` (`cnn_5ch_7kelas_hard_negative.onnx`) — CNN 5-Channel Klasifikasi (7 Kelas + *Hard Negative*)<br>• **Kelas**: `Bercak Bakteri`, `Bercak Cercospora`, `Bercak Putih`, `Daun Sehat`, `Defisiensi Nutrisi`, `Virus Keriting`, serta `Bukan Daun`<br>• **FastAPI Warm Inference Worker** (`127.0.0.1:8001`) dengan *circuit breaker*, fallback CLI otomatis, dan **anti-duplikasi gambar** |
-| **Dashboard Liquid Glass & API Docs** | • `/` (`chilivision.blade.php`): Live webcam & upload deteksi daun, grafik tren interaktif Soil Moisture & DHT22, kontrol semprot manual, chatbot, status ESP32, Light/Dark mode mulus, dan ekspor laporan CSV (`/api/reports/export/{soil\|dht22\|leaf\|spray}`)<br>• `/api` (`api-docs.blade.php`): Dokumentasi interaktif + Live Endpoint Playground (`/api?format=json`) |
+| **Deteksi & Klasifikasi AI (2 Model ONNX)** | • `yolov8n-chili` (`yolov8n_chili.onnx`) — *Default*, YOLOv8n Deteksi Objek<br>• `cnn-5ch-chili` (`cnn_5ch_7kelas_hard_negative.onnx`) — CNN 5-Channel Klasifikasi (7 Kelas + *Hard Negative*)<br>• **Kelas**: `Bercak Bakteri`, `Bercak Cercospora`, `Bercak Putih`, `Daun Sehat`, `Defisiensi Nutrisi`, `Virus Keriting`, serta `Bukan Daun`<br>• **FastAPI Warm Inference Worker** (`127.0.0.1:8001`) dengan fallback CLI otomatis dan **anti-duplikasi gambar** |
+| **Website Dashboard & Dokumentasi API** | • `/` (`chilivision.blade.php`): Live kamera & upload foto daun, grafik tren Soil Moisture & DHT22, tombol semprot manual, chatbot, status ESP32, Light/Dark mode, serta ekspor laporan CSV (`/api/reports/export/{soil\|dht22\|leaf\|spray}`)<br>• `/api` (`api-docs.blade.php`): Dokumentasi lengkap + halaman uji endpoint langsung di browser (`/api?format=json`) |
 | **Chatbot Gemini AI & Telegram 2 Arah** | • Percakapan bebas & perintah cepat (`gemini-3.5-flash-lite` + fallback `gemini-3.8-flash`)<br>• Sinkronisasi 2 arah Website ↔ Telegram (`@chili_vision_bot`) termasuk foto & tombol inline<br>• **Pengaman Pestisida**: saat penyakit terdeteksi, bot mengirim konfirmasi **Ya, Semprot Pestisida (5s)** / **Tidak, Jangan Semprot** |
 | **Otomasi IoT ESP32** | • **Air otomatis**: menyala 5 detik saat kelembapan tanah `< 30%` (ambang batas bisa diubah via chatbot, cooldown 60 detik)<br>• **Pestisida terjadwal**: default tiap **5 hari (120 jam)**, dapat diatur lewat chatbot dan dipantau tiap menit oleh `chilivision:check-schedule` |
 

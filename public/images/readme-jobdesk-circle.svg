@@ -53,8 +53,8 @@
   <rect x="2" y="2" width="1196" height="576" rx="28" fill="url(#centerGlow)"/>
 
   <!-- Header -->
-  <text x="600" y="44" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2">ARSITEKTUR KOLABORASI &amp; PEMBAGIAN JOBDESK TIM</text>
-  <text x="600" y="72" text-anchor="middle" fill="#f0fdf4" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">5 Branch Modul Terintegrasi ke Branch Utama (main)</text>
+  <text x="600" y="44" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2">PEMBAGIAN TUGAS TIM CHILIVISION</text>
+  <text x="600" y="72" text-anchor="middle" fill="#f0fdf4" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Peran &amp; Tanggung Jawab Setiap Anggota Tim</text>
 
   <!-- Orbital Ring Background -->
   <ellipse cx="600" cy="300" rx="385" ry="172" stroke="#4ade80" stroke-opacity="0.18" stroke-width="1.5" stroke-dasharray="7 8"/>
@@ -73,7 +73,7 @@
   <g filter="url(#nodeShadow)">
     <circle cx="600" cy="272" r="78" fill="url(#hubFill)" stroke="#4ade80" stroke-width="3"/>
     <circle cx="600" cy="272" r="70" stroke="#bbf7d0" stroke-opacity="0.25" stroke-width="1.2"/>
-    <text x="600" y="250" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="800" letter-spacing="1.5">INTEGRASI</text>
+    <text x="600" y="250" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="800" letter-spacing="1.5">PROYEK</text>
     <text x="600" y="278" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="23" font-weight="800">ChiliVision</text>
     <rect x="556" y="292" width="88" height="24" rx="12" fill="#22c55e" fill-opacity="0.24" stroke="#4ade80" stroke-opacity="0.7"/>
     <text x="600" y="309" text-anchor="middle" fill="#dcfce7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700">main</text>
@@ -92,7 +92,7 @@
     <rect x="188" y="213" width="74" height="20" rx="10" fill="#22c55e" fill-opacity="0.22" stroke="#4ade80" stroke-opacity="0.55"/>
     <text x="225" y="227" text-anchor="middle" fill="#dcfce7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">backend</text>
   </g>
-  <text x="225" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">REST API · TiDB Cloud · Gemini · Telegram</text>
+  <text x="225" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">API Server · Database · Chatbot AI · Telegram</text>
 
   <!-- 2. FRONTEND CIRCLE (Top-Right) -->
   <g filter="url(#nodeShadow)">
@@ -105,7 +105,7 @@
     <rect x="936" y="213" width="78" height="20" rx="10" fill="#0ea5e9" fill-opacity="0.22" stroke="#38bdf8" stroke-opacity="0.55"/>
     <text x="975" y="227" text-anchor="middle" fill="#e0f2fe" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">frontend</text>
   </g>
-  <text x="975" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Liquid Glass UI · Live Cam · Charts · API Docs</text>
+  <text x="975" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Dashboard Web · Kamera Deteksi · Grafik Sensor</text>
 
   <!-- 3. TRAINING MODEL CIRCLE (Bottom-Left) -->
   <g filter="url(#nodeShadow)">
@@ -125,7 +125,7 @@
     <rect x="155" y="436" width="110" height="20" rx="10" fill="#a855f7" fill-opacity="0.22" stroke="#c084fc" stroke-opacity="0.55"/>
     <text x="210" y="450" text-anchor="middle" fill="#f3e8ff" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700">training-model</text>
   </g>
-  <text x="210" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">YOLOv8n · CNN 5-Ch · ONNX · FastAPI Worker</text>
+  <text x="210" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Dataset · Training Model AI · Deteksi Daun</text>
 
   <!-- 4. IOT HARDWARE CIRCLE (Bottom-Right) -->
   <g filter="url(#nodeShadow)">
@@ -142,7 +142,7 @@
     <rect x="965" y="436" width="50" height="20" rx="10" fill="#f59e0b" fill-opacity="0.22" stroke="#fbbf24" stroke-opacity="0.55"/>
     <text x="990" y="450" text-anchor="middle" fill="#fef3c7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">iot</text>
   </g>
-  <text x="990" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Soil Moisture · DHT22 · Relay Pompa · LCD</text>
+  <text x="990" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Sensor Tanah &amp; Suhu · Relay Pompa · LCD</text>
 
   <!-- 5. QA TESTING CIRCLE (Bottom-Center) -->
   <g filter="url(#nodeShadow)">
@@ -154,5 +154,5 @@
     <rect x="556" y="494" width="88" height="20" rx="10" fill="#ec4899" fill-opacity="0.22" stroke="#f472b6" stroke-opacity="0.55"/>
     <text x="600" y="508" text-anchor="middle" fill="#fce7f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">qa-testing</text>
   </g>
-  <text x="600" y="556" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">38 PHPUnit Tests · Postman Collection · QA Validasi</text>
+  <text x="600" y="556" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Pengujian Otomatis · Uji API Postman · Validasi QA</text>
 </svg>
