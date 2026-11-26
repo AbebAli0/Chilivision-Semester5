@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 580" width="1200" height="580" fill="none">
+  <defs>
+    <linearGradient id="canvasBg" x1="0" y1="0" x2="1200" y2="580" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06140d"/>
+      <stop offset="50%" stop-color="#0b2216"/>
+      <stop offset="100%" stop-color="#071710"/>
+    </linearGradient>
+    <linearGradient id="outerStroke" x1="0" y1="0" x2="1200" y2="580" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.45"/>
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.45"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="600" cy="272" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.28"/>
+      <stop offset="65%" stop-color="#16a34a" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#06140d" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="hubFill" x1="522" y1="194" x2="678" y2="350" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#166534"/>
+      <stop offset="100%" stop-color="#062214"/>
+    </linearGradient>
+    <linearGradient id="nodeBackend" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#082414"/>
+    </linearGradient>
+    <linearGradient id="nodeFrontend" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c4a6e"/>
+      <stop offset="100%" stop-color="#082236"/>
+    </linearGradient>
+    <linearGradient id="nodeAI" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="100%" stop-color="#1e103d"/>
+    </linearGradient>
+    <linearGradient id="nodeIoT" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#2c1607"/>
+    </linearGradient>
+    <linearGradient id="nodeQA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#831843"/>
+      <stop offset="100%" stop-color="#2e0a1a"/>
+    </linearGradient>
+    <pattern id="gridDots" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#86efac" fill-opacity="0.1"/>
+    </pattern>
+    <filter id="nodeShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#010804" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas -->
+  <rect x="2" y="2" width="1196" height="576" rx="28" fill="url(#canvasBg)" stroke="url(#outerStroke)" stroke-width="2"/>
+  <rect x="2" y="2" width="1196" height="576" rx="28" fill="url(#gridDots)"/>
+  <rect x="2" y="2" width="1196" height="576" rx="28" fill="url(#centerGlow)"/>
+
+  <!-- Header -->
+  <text x="600" y="44" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2">PEMBAGIAN TUGAS TIM CHILIVISION</text>
+  <text x="600" y="72" text-anchor="middle" fill="#f0fdf4" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="24" font-weight="800">Peran &amp; Tanggung Jawab Setiap Anggota Tim</text>
+
+  <!-- Orbital Ring Background -->
+  <ellipse cx="600" cy="300" rx="385" ry="172" stroke="#4ade80" stroke-opacity="0.18" stroke-width="1.5" stroke-dasharray="7 8"/>
+  <circle cx="600" cy="272" r="108" stroke="#86efac" stroke-opacity="0.22" stroke-width="1.2" stroke-dasharray="4 6"/>
+
+  <!-- Spokes connecting Center (600, 272) to 5 Jobdesk Circles -->
+  <g stroke-width="2.2" stroke-linecap="round" opacity="0.75">
+    <line x1="600" y1="272" x2="225" y2="185" stroke="#4ade80" stroke-dasharray="6 5"/>
+    <line x1="600" y1="272" x2="975" y2="185" stroke="#38bdf8" stroke-dasharray="6 5"/>
+    <line x1="600" y1="272" x2="210" y2="408" stroke="#c084fc" stroke-dasharray="6 5"/>
+    <line x1="600" y1="272" x2="990" y2="408" stroke="#fbbf24" stroke-dasharray="6 5"/>
+    <line x1="600" y1="272" x2="600" y2="468" stroke="#f472b6" stroke-dasharray="6 5"/>
+  </g>
+
+  <!-- Central Hub Circle: main -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="600" cy="272" r="78" fill="url(#hubFill)" stroke="#4ade80" stroke-width="3"/>
+    <circle cx="600" cy="272" r="70" stroke="#bbf7d0" stroke-opacity="0.25" stroke-width="1.2"/>
+    <text x="600" y="250" text-anchor="middle" fill="#86efac" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="800" letter-spacing="1.5">PROYEK</text>
+    <text x="600" y="278" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="23" font-weight="800">ChiliVision</text>
+    <rect x="556" y="292" width="88" height="24" rx="12" fill="#22c55e" fill-opacity="0.24" stroke="#4ade80" stroke-opacity="0.7"/>
+    <text x="600" y="309" text-anchor="middle" fill="#dcfce7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700">main</text>
+  </g>
+
+  <!-- 1. BACKEND CIRCLE (Top-Left) -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="225" cy="185" r="70" fill="url(#nodeBackend)" stroke="#4ade80" stroke-width="2.6"/>
+    <circle cx="225" cy="185" r="63" stroke="#bbf7d0" stroke-opacity="0.18" stroke-width="1"/>
+    <rect x="208" y="139" width="34" height="10" rx="3" stroke="#4ade80" stroke-width="2"/>
+    <rect x="208" y="153" width="34" height="10" rx="3" stroke="#4ade80" stroke-width="2"/>
+    <circle cx="215" cy="144" r="1.7" fill="#4ade80"/>
+    <circle cx="215" cy="158" r="1.7" fill="#4ade80"/>
+    <text x="225" y="185" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">Backend</text>
+    <text x="225" y="203" text-anchor="middle" fill="#bbf7d0" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">@happiestvrgo</text>
+    <rect x="188" y="213" width="74" height="20" rx="10" fill="#22c55e" fill-opacity="0.22" stroke="#4ade80" stroke-opacity="0.55"/>
+    <text x="225" y="227" text-anchor="middle" fill="#dcfce7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">backend</text>
+  </g>
+  <text x="225" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">API Server · Database · Chatbot AI · Telegram</text>
+
+  <!-- 2. FRONTEND CIRCLE (Top-Right) -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="975" cy="185" r="70" fill="url(#nodeFrontend)" stroke="#38bdf8" stroke-width="2.6"/>
+    <circle cx="975" cy="185" r="63" stroke="#bae6fd" stroke-opacity="0.18" stroke-width="1"/>
+    <rect x="958" y="139" width="34" height="24" rx="4" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="958" y1="147" x2="992" y2="147" stroke="#38bdf8" stroke-width="1.8"/>
+    <text x="975" y="185" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">Frontend</text>
+    <text x="975" y="203" text-anchor="middle" fill="#bae6fd" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">@mfitrah1502</text>
+    <rect x="936" y="213" width="78" height="20" rx="10" fill="#0ea5e9" fill-opacity="0.22" stroke="#38bdf8" stroke-opacity="0.55"/>
+    <text x="975" y="227" text-anchor="middle" fill="#e0f2fe" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">frontend</text>
+  </g>
+  <text x="975" y="274" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Dashboard Web · Kamera Deteksi · Grafik Sensor</text>
+
+  <!-- 3. TRAINING MODEL CIRCLE (Bottom-Left) -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="210" cy="408" r="70" fill="url(#nodeAI)" stroke="#c084fc" stroke-width="2.6"/>
+    <circle cx="210" cy="408" r="63" stroke="#e9d5ff" stroke-opacity="0.18" stroke-width="1"/>
+    <circle cx="197" cy="367" r="3.2" fill="#c084fc"/>
+    <circle cx="197" cy="380" r="3.2" fill="#c084fc"/>
+    <circle cx="210" cy="373.5" r="3.6" fill="#e9d5ff"/>
+    <circle cx="223" cy="367" r="3.2" fill="#c084fc"/>
+    <circle cx="223" cy="380" r="3.2" fill="#c084fc"/>
+    <line x1="200" y1="368" x2="207" y2="372" stroke="#c084fc" stroke-width="1.6"/>
+    <line x1="200" y1="379" x2="207" y2="375" stroke="#c084fc" stroke-width="1.6"/>
+    <line x1="213" y1="372" x2="220" y2="368" stroke="#c084fc" stroke-width="1.6"/>
+    <line x1="213" y1="375" x2="220" y2="379" stroke="#c084fc" stroke-width="1.6"/>
+    <text x="210" y="408" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">AI / Model</text>
+    <text x="210" y="426" text-anchor="middle" fill="#e9d5ff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">@Daffamanta</text>
+    <rect x="155" y="436" width="110" height="20" rx="10" fill="#a855f7" fill-opacity="0.22" stroke="#c084fc" stroke-opacity="0.55"/>
+    <text x="210" y="450" text-anchor="middle" fill="#f3e8ff" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700">training-model</text>
+  </g>
+  <text x="210" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Dataset · Training Model AI · Deteksi Daun</text>
+
+  <!-- 4. IOT HARDWARE CIRCLE (Bottom-Right) -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="990" cy="408" r="70" fill="url(#nodeIoT)" stroke="#fbbf24" stroke-width="2.6"/>
+    <circle cx="990" cy="408" r="63" stroke="#fde68a" stroke-opacity="0.18" stroke-width="1"/>
+    <rect x="979" y="362" width="22" height="22" rx="4" stroke="#fbbf24" stroke-width="2"/>
+    <rect x="985" y="368" width="10" height="10" rx="1.5" fill="#fbbf24" fill-opacity="0.55"/>
+    <line x1="974" y1="369" x2="979" y2="369" stroke="#fbbf24" stroke-width="1.8"/>
+    <line x1="974" y1="377" x2="979" y2="377" stroke="#fbbf24" stroke-width="1.8"/>
+    <line x1="1001" y1="369" x2="1006" y2="369" stroke="#fbbf24" stroke-width="1.8"/>
+    <line x1="1001" y1="377" x2="1006" y2="377" stroke="#fbbf24" stroke-width="1.8"/>
+    <text x="990" y="408" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">IoT ESP32</text>
+    <text x="990" y="426" text-anchor="middle" fill="#fde68a" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">@sabilillah123</text>
+    <rect x="965" y="436" width="50" height="20" rx="10" fill="#f59e0b" fill-opacity="0.22" stroke="#fbbf24" stroke-opacity="0.55"/>
+    <text x="990" y="450" text-anchor="middle" fill="#fef3c7" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">iot</text>
+  </g>
+  <text x="990" y="497" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Sensor Tanah &amp; Suhu · Relay Pompa · LCD</text>
+
+  <!-- 5. QA TESTING CIRCLE (Bottom-Center) -->
+  <g filter="url(#nodeShadow)">
+    <circle cx="600" cy="468" r="66" fill="url(#nodeQA)" stroke="#f472b6" stroke-width="2.6"/>
+    <circle cx="600" cy="468" r="59" stroke="#fbcfe8" stroke-opacity="0.18" stroke-width="1"/>
+    <path d="M591 434 L598 441 L611 427" stroke="#f472b6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="600" y="466" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" font-weight="800">QA Testing</text>
+    <text x="600" y="484" text-anchor="middle" fill="#fbcfe8" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600">@nabilah-kh</text>
+    <rect x="556" y="494" width="88" height="20" rx="10" fill="#ec4899" fill-opacity="0.22" stroke="#f472b6" stroke-opacity="0.55"/>
+    <text x="600" y="508" text-anchor="middle" fill="#fce7f3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="700">qa-testing</text>
+  </g>
+  <text x="600" y="556" text-anchor="middle" fill="#94b8a3" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">Pengujian Otomatis · Uji API Postman · Validasi QA</text>
+</svg>
