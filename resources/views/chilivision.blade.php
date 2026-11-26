@@ -1258,12 +1258,14 @@
                 <span class="if-light">🌙 Dark Mode</span>
                 <span class="if-dark">☀️ Light Mode</span>
             </button>
+            {{--
             <span class="badge laravel">⚡ Laravel Full-Stack</span>
             <span class="badge mysql">🗄️ TiDB Cloud Connected</span>
             <span class="esp32-pill" id="navEsp32Badge"><span class="esp32-dot"></span><span>ESP32: Loading...</span></span>
             <a class="badge" href="api" target="_blank">📚 Dokumentasi &amp; Playground API (/api) ↗</a>
             <a class="badge" href="api?format=json" target="_blank">📄 Raw JSON Spec ↗</a>
             <a class="badge" href="api/dashboard/state" target="_blank">📡 Live State JSON ↗</a>
+             --}}
         </div>
     </nav>
 
@@ -1285,7 +1287,7 @@
                 <div class="kpi-val" id="kpiLeafName">Loading...</div>
                 <div class="kpi-sub" id="kpiLeafMeta">Jika daun tidak berubah, gambar tidak dikirim ke database.</div>
             </div>
-            <div><span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span></div>
+            <div>{{-- <span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span> --}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1297,7 +1299,7 @@
                 <div class="kpi-val" id="kpiSoilVal">-- %</div>
                 <div class="kpi-sub" id="kpiSoilMeta">Waiting for sensor reading...</div>
             </div>
-            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+            <div>{{--<span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span>--}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1309,7 +1311,7 @@
                 <div class="kpi-val" id="kpiDhtVal">-- °C / -- %</div>
                 <div class="kpi-sub" id="kpiDhtMeta">Waiting for sensor reading...</div>
             </div>
-            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+            <div>{{--<span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span>--}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1323,7 +1325,7 @@
                     🧪 <strong>Pestisida:</strong> <span id="kpiLastPesticide">Belum ada</span>
                 </div>
             </div>
-            <div><span class="pipeline-tag">🎛️ Web Button &amp; Chatbot Command</span></div>
+            <div>{{--<span class="pipeline-tag">🎛️ Web Button &amp; Chatbot Command</span>--}}</div>
         </div>
     </section>
 
@@ -1442,7 +1444,8 @@
 
                 <div class="chat-box">
                     <div class="chat-messages" id="chatMessages">
-                        <div class="chat-bubble bot">Load chatbot message from TiDB Cloud database...</div>
+                        <div class="chat-bubble bot">Load chatbot message...</div>
+                        {{-- <div class="chat-bubble bot">Load chatbot message from TiDB Cloud database...</div>--}}
                     </div>
                     <div class="chat-quick-chips">
                         <button type="button" class="chip" onclick="sendQuickCommand('/status')">📊 Status</button>
@@ -1662,10 +1665,11 @@
             </div>
             <span class="badge" id="sprayTotalsBadge">💧 0 Air · 🧪 0 Pestisida</span>
         </div>
-        <div id="leafStatsList" class="spray-meta">Memuat ringkasan statistik...</div>
+        <div id="leafStatsList" class="spray-meta">Load statistics...</div>
     </section>
 
     <!-- Endpoint API Documentation Table -->
+    {{--  
     <section class="card">
         <div class="card-title">
             <div>
@@ -1762,8 +1766,10 @@
             </table>
         </div>
     </section>
-
     <p class="footer">🌶️ ChiliVision · Laravel + TiDB Cloud Computer Vision &amp; Smart IoT Agriculture System</p>
+    --}}
+    
+    <p class="footer">🌶️ ChiliVision 2026 | All Right Reserved</p>
 </main>
 
 <script>
