@@ -1542,7 +1542,7 @@
                     <input type="number" step="0.1" min="0" max="100" id="inputSoilMoisture" value="27.5" required placeholder="0 - 100%">
                     <button type="submit" class="secondary">🌱 Kirim Soil Moisture</button>
                 </div>
-                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/soil-moisture</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>soil_moisture_readings</code>.</p>
+                {{-- <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/soil-moisture</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>soil_moisture_readings</code>.</p> --}}
             </form>
         </div>
 
@@ -1567,7 +1567,7 @@
                     <input type="number" step="0.1" min="0" max="100" id="inputDhtHum" value="68.0" required placeholder="Humidity (%)">
                 </div>
                 <button type="submit" class="secondary" style="margin-top:10px;">🌡️ Kirim Data DHT22</button>
-                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/dht22</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>dht11_readings</code>.</p>
+                {{-- <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/dht22</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>dht11_readings</code>.</p> --}}
             </form>
         </div>
     </section>
