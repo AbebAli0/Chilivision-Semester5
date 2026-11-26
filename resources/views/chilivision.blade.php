@@ -1415,7 +1415,8 @@
             </div>
 
             <div class="upload-zone">
-                <label class="field-label" for="upload">📁 Atau uji API Gambar Daun dengan upload foto</label>
+                {{-- <label class="field-label" for="upload">📁 Atau uji API Gambar Daun dengan upload foto</label>--}}
+                <label class="field-label" for="upload">📁 Upload foto untuk deteksi</label>
                 <input id="upload" type="file" accept="image/jpeg,image/png,image/webp">
                 <div class="toolbar" style="margin-top:10px;">
                     <button id="uploadPredict" class="secondary">📤 Upload &amp; Analisis Daun</button>
@@ -1469,13 +1470,13 @@
                 <div class="card-title">
                     <div>
                         <h2>🍃 Deteksi Daun Terakhir di TiDB Cloud</h2>
-                        <p class="card-subtitle">Tabel <code>leaf_detections</code> (hanya tersimpan saat daun berubah)</p>
+                        {{-- <p class="card-subtitle">Tabel <code>leaf_detections</code> (hanya tersimpan saat daun berubah)</p>--}}
                     </div>
                 </div>
                 <div id="latestLeafDbBox" style="display:flex;gap:14px;align-items:center;">
                     <img id="latestLeafThumb" src="" alt="Thumb" hidden style="width:auto;height:auto;max-width:110px;max-height:110px;object-fit:contain;border-radius:12px;border:2px solid var(--line);">
                     <div style="font-size:.83rem;line-height:1.55;color:var(--text-main);" id="latestLeafInfo">
-                        Belum ada gambar daun yang disimpan ke database.
+                        Belum ada gambar daun yang disimpan.
                     </div>
                 </div>
             </div>
