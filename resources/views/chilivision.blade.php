@@ -1527,7 +1527,7 @@
             <div class="card-title">
                 <div>
                     <h2>🌱 API Sensor Soil Moisture</h2>
-                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                    {{-- <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>--}}
                 </div>
             </div>
 
@@ -1551,13 +1551,13 @@
             <div class="card-title">
                 <div>
                     <h2>🌡️ API Sensor DHT22</h2>
-                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                    {{-- <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>--}}
                 </div>
             </div>
 
             <div class="spray-box">
                 <h4>🌡️ Pembacaan DHT22 Terakhir</h4>
-                <div class="spray-meta" id="dhtDetailBox">Loading...</div>
+                <div class="spray-meta" id="dhtDetailBox">Loading... </div>
             </div>
 
             <form onsubmit="submitDht11(event)">
@@ -1621,7 +1621,7 @@
                     <svg id="soilChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren kelembapan tanah"></svg>
                     <div id="soilChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
                 </div>
-                <div class="chart-legend" id="soilChartLegend">Memuat data grafik...</div>
+                <div class="chart-legend" id="soilChartLegend">Load graphic data... </div>
                 <div class="chart-inspector" id="soilChartInspector">
                     <span id="soilChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
                     <div class="chart-nav-group">
@@ -1645,7 +1645,7 @@
                     <svg id="dhtChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren DHT22"></svg>
                     <div id="dhtChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
                 </div>
-                <div class="chart-legend" id="dhtChartLegend">Memuat data grafik...</div>
+                <div class="chart-legend" id="dhtChartLegend">Load graphic data... </div>
                 <div class="chart-inspector" id="dhtChartInspector">
                     <span id="dhtChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
                     <div class="chart-nav-group">
