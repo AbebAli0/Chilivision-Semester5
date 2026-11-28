@@ -1544,12 +1544,14 @@
                 <span class="if-light">🌙 Dark Mode</span>
                 <span class="if-dark">☀️ Light Mode</span>
             </button>
+            {{--
             <span class="badge laravel">⚡ Laravel Full-Stack</span>
             <span class="badge mysql">🗄️ TiDB Cloud Connected</span>
             <span class="esp32-pill" id="navEsp32Badge"><span class="esp32-dot"></span><span>ESP32: Memuat...</span></span>
             <a class="badge" href="api" target="_blank">📚 Dokumentasi &amp; Playground API (/api) ↗</a>
             <a class="badge" href="api?format=json" target="_blank">📄 Raw JSON Spec ↗</a>
             <a class="badge" href="api/dashboard/state" target="_blank">📡 Live State JSON ↗</a>
+             --}}
         </div>
     </nav>
 
@@ -1571,7 +1573,7 @@
                 <div class="kpi-val" id="kpiLeafName">Memuat...</div>
                 <div class="kpi-sub" id="kpiLeafMeta">Jika daun tidak berubah, gambar tidak dikirim ke database.</div>
             </div>
-            <div><span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span></div>
+            <div>{{-- <span class="pipeline-tag">🔗 API Gambar Daun → TiDB Cloud</span> --}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1583,7 +1585,7 @@
                 <div class="kpi-val" id="kpiSoilVal">-- %</div>
                 <div class="kpi-sub" id="kpiSoilMeta">Menunggu pembacaan sensor...</div>
             </div>
-            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+            <div>{{--<span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span>--}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1595,7 +1597,7 @@
                 <div class="kpi-val" id="kpiDhtVal">-- °C / -- %</div>
                 <div class="kpi-sub" id="kpiDhtMeta">Menunggu pembacaan sensor...</div>
             </div>
-            <div><span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span></div>
+            <div>{{--<span class="pipeline-tag">🔄 Web &gt; Chatbot &gt; Database</span>--}}</div>
         </div>
 
         <div class="kpi-card">
@@ -1609,7 +1611,7 @@
                     🧪 <strong>Pestisida:</strong> <span id="kpiLastPesticide">Belum ada</span>
                 </div>
             </div>
-            <div><span class="pipeline-tag">🎛️ Web Button &amp; Chatbot Command</span></div>
+            <div>{{--<span class="pipeline-tag">🎛️ Web Button &amp; Chatbot Command</span>--}}</div>
         </div>
     </section>
 
@@ -1699,7 +1701,8 @@
             </div>
 
             <div class="upload-zone">
-                <label class="field-label" for="upload">📁 Atau uji API Gambar Daun dengan upload foto</label>
+                {{-- <label class="field-label" for="upload">📁 Atau uji API Gambar Daun dengan upload foto</label>--}}
+                <label class="field-label" for="upload">📁 Upload foto untuk deteksi</label>
                 <input id="upload" type="file" accept="image/jpeg,image/png,image/webp">
                 <div class="toolbar" style="margin-top:10px;">
                     <button id="uploadPredict" class="secondary">📤 Upload &amp; Analisis Daun</button>
@@ -1728,7 +1731,8 @@
 
                 <div class="chat-box">
                     <div class="chat-messages" id="chatMessages">
-                        <div class="chat-bubble bot">Memuat pesan chatbot dari database TiDB Cloud...</div>
+                        <div class="chat-bubble bot">Load chatbot message...</div>
+                        {{-- <div class="chat-bubble bot">Load chatbot message from TiDB Cloud database...</div>--}}
                     </div>
                     <div class="chat-quick-chips">
                         <button type="button" class="chip" onclick="sendQuickCommand('/status')">📊 Status</button>
@@ -1752,13 +1756,13 @@
                 <div class="card-title">
                     <div>
                         <h2>🍃 Deteksi Daun Terakhir di TiDB Cloud</h2>
-                        <p class="card-subtitle">Tabel <code>leaf_detections</code> (hanya tersimpan saat daun berubah)</p>
+                        {{-- <p class="card-subtitle">Tabel <code>leaf_detections</code> (hanya tersimpan saat daun berubah)</p>--}}
                     </div>
                 </div>
                 <div id="latestLeafDbBox" style="display:flex;gap:14px;align-items:center;">
                     <img id="latestLeafThumb" src="" alt="Thumb" hidden style="width:auto;height:auto;max-width:110px;max-height:110px;object-fit:contain;border-radius:12px;border:2px solid var(--line);">
                     <div style="font-size:.83rem;line-height:1.55;color:var(--text-main);" id="latestLeafInfo">
-                        Belum ada gambar daun yang disimpan ke database.
+                        Belum ada gambar daun yang disimpan.
                     </div>
                 </div>
             </div>
@@ -1809,7 +1813,7 @@
             <div class="card-title">
                 <div>
                     <h2>🌱 API Sensor Soil Moisture</h2>
-                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                    {{-- <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>--}}
                 </div>
             </div>
 
@@ -1824,7 +1828,7 @@
                     <input type="number" step="0.1" min="0" max="100" id="inputSoilMoisture" value="27.5" required placeholder="0 - 100%">
                     <button type="submit" class="secondary">🌱 Kirim Soil Moisture</button>
                 </div>
-                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/soil-moisture</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>soil_moisture_readings</code>.</p>
+                {{-- <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/soil-moisture</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>soil_moisture_readings</code>.</p> --}}
             </form>
         </div>
 
@@ -1833,13 +1837,13 @@
             <div class="card-title">
                 <div>
                     <h2>🌡️ API Sensor DHT22</h2>
-                    <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>
+                    {{-- <p class="card-subtitle">Alur: <code>Web &gt; Chatbot &gt; Database</code></p>--}}
                 </div>
             </div>
 
             <div class="spray-box">
                 <h4>🌡️ Pembacaan DHT22 Terakhir</h4>
-                <div class="spray-meta" id="dhtDetailBox">Memuat...</div>
+                <div class="spray-meta" id="dhtDetailBox">Loading... </div>
             </div>
 
             <form onsubmit="submitDht11(event)">
@@ -1849,7 +1853,7 @@
                     <input type="number" step="0.1" min="0" max="100" id="inputDhtHum" value="68.0" required placeholder="Humidity (%)">
                 </div>
                 <button type="submit" class="secondary" style="margin-top:10px;">🌡️ Kirim Data DHT22</button>
-                <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/dht22</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>dht11_readings</code>.</p>
+                {{-- <p style="font-size:.75rem;color:var(--text-muted);margin:8px 0 0;">Mengirim ke <code>POST /api/sensor/dht22</code> → langsung memperbarui Web, mengirim notifikasi ke Chatbot, dan menyimpan ke tabel <code>dht11_readings</code>.</p> --}}
             </form>
         </div>
     </section>
@@ -1903,7 +1907,7 @@
                     <svg id="soilChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren kelembapan tanah"></svg>
                     <div id="soilChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
                 </div>
-                <div class="chart-legend" id="soilChartLegend">Memuat data grafik...</div>
+                <div class="chart-legend" id="soilChartLegend">Load graphic data... </div>
                 <div class="chart-inspector" id="soilChartInspector">
                     <span id="soilChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
                     <div class="chart-nav-group">
@@ -1927,7 +1931,7 @@
                     <svg id="dhtChartSvg" class="chart-svg" viewBox="0 0 460 195" aria-label="Grafik tren DHT22"></svg>
                     <div id="dhtChartTooltip" class="chart-tooltip" role="tooltip" hidden></div>
                 </div>
-                <div class="chart-legend" id="dhtChartLegend">Memuat data grafik...</div>
+                <div class="chart-legend" id="dhtChartLegend">Load graphic data... </div>
                 <div class="chart-inspector" id="dhtChartInspector">
                     <span id="dhtChartReadout">Arahkan kursor atau ketuk grafik untuk melihat detail per titik.</span>
                     <div class="chart-nav-group">
@@ -1948,10 +1952,11 @@
             </div>
             <span class="badge" id="sprayTotalsBadge">💧 0 Air · 🧪 0 Pestisida</span>
         </div>
-        <div id="leafStatsList" class="spray-meta">Memuat ringkasan statistik...</div>
+        <div id="leafStatsList" class="spray-meta">Load statistics...</div>
     </section>
 
     <!-- Endpoint API Documentation Table -->
+    {{--  
     <section class="card">
         <div class="card-title">
             <div>
@@ -2048,17 +2053,10 @@
             </table>
         </div>
     </section>
-
-    <footer class="footer">
-        <div class="footer-logo-row">
-            <div class="polije-brand-pill" title="Politeknik Negeri Jember">
-                <span class="if-light"><img src="{{ asset('images/logo-polije.png') }}" alt="Logo Politeknik Negeri Jember" class="polije-logo footer-polije-logo"></span>
-                <span class="if-dark"><img src="{{ asset('images/logo-polije-dark.png') }}" alt="Logo Politeknik Negeri Jember" class="polije-logo footer-polije-logo"></span>
-            </div>
-        </div>
-        <p class="footer-title">🌶️ ChiliVision · Deteksi &amp; Klasifikasi Penyakit Pada Daun Cabai</p>
-        <p class="footer-credit">Dibuat oleh Kelompok 1 Golongan F Teknik Informatika</p>
-    </footer>
+    <p class="footer">🌶️ ChiliVision · Laravel + TiDB Cloud Computer Vision &amp; Smart IoT Agriculture System</p>
+    --}}
+    
+    <p class="footer">🌶️ ChiliVision 2026 | All Right Reserved</p>
 </main>
 
 <script>
